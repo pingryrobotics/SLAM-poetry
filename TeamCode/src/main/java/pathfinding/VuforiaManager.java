@@ -3,6 +3,8 @@ package pathfinding;
 import android.graphics.Bitmap;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.ThreadPool;
@@ -13,7 +15,6 @@ import com.vuforia.PIXEL_FORMAT;
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.function.Consumer;
 import org.firstinspires.ftc.robotcore.external.function.Continuation;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.SwitchableCamera;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -24,6 +25,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
+import org.jetbrains.annotations.TestOnly;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -145,14 +147,15 @@ public class VuforiaManager {
 //                return vuforiaLocalizer;
 //            }
 //        });
-        CameraName[] cameraNames = CameraInstance.getAvailableCameraNames()
-                .toArray(new CameraName[0]);
-        Log.d(TAG, "num of camera names: " + cameraNames.length);
-        parameters.cameraName = ClassFactory.getInstance().getCameraManager()
-                .nameForSwitchableCamera(cameraNames);
+        // switchable cameras if we want to do that
+//        CameraName[] cameraNames = CameraInstance.getAvailableCameraNames()
+//                .toArray(new CameraName[0]);
+//        Log.d(TAG, "num of camera names: " + cameraNames.length);
+//        parameters.cameraName = ClassFactory.getInstance().getCameraManager()
+//                .nameForSwitchableCamera(cameraNames);
 
         vuforiaLocalizer = ClassFactory.getInstance().createVuforia(parameters);
-        switchableCamera = (SwitchableCamera) vuforiaLocalizer.getCamera();
+//        switchableCamera = (SwitchableCamera) vuforiaLocalizer.getCamera();
 
 
         // instantiate the vuforia localizer
@@ -262,6 +265,7 @@ public class VuforiaManager {
      * Sets the position of the phone on the robot
      * SEE THE GITHUB FOR HOW TO DO THIS, ITS REALLY DETAILED
      * GO READ IT.
+     *
      * https://github.com/FIRST-Tech-Challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuforiaNavigation.java
      */
     private void setPhoneLocation() {
@@ -276,7 +280,7 @@ public class VuforiaManager {
         RobotLog.ii(TAG, "phone=%s", format(phoneLocationOnRobot));
     }
 
-    /* END INITIALIZATIION */
+    /* END INITIALIZATION */
 
 
     /**
@@ -358,8 +362,8 @@ public class VuforiaManager {
 
 
     /**
-     * Gets a bitmap from vuforia and perform an operation with it through a consumer
-     * @return the bitmap
+     * Gets a bitmap from vuforia and allows the caller to perform an operation with it
+     * through a consumer
      */
     public void getBitmapFromFrame(final Consumer<Bitmap> bitmapConsumer) {
         vuforiaLocalizer.getFrameOnce(Continuation.create(ThreadPool.getDefault(), new Consumer<Frame>()
@@ -367,8 +371,10 @@ public class VuforiaManager {
             @Override public void accept(Frame frame)
             {
                 Log.d(TAG, "frame null? " + (frame == null));
-                Bitmap bitmap = convertFrameToBitmap(frame);
-                bitmapConsumer.accept(bitmap);
+                if (frame != null) {
+                    Bitmap bitmap = convertFrameToBitmap(frame);
+                    bitmapConsumer.accept(bitmap);
+                }
             }
 
         }));
@@ -381,7 +387,7 @@ public class VuforiaManager {
      * @param frame the frame to convert
      * @return a bitmap representing the frame
      */
-    public static Bitmap convertFrameToBitmap(Frame frame)
+    public static Bitmap convertFrameToBitmap(@NonNull Frame frame)
     {
         int[] pixelFormats = new int[] { PIXEL_FORMAT.RGB565, PIXEL_FORMAT.RGBA8888, };
 
@@ -427,7 +433,13 @@ public class VuforiaManager {
         });
     }
 
-    public void switchCamera(CameraInstance newCamera) {
+    /**
+     * Switches the vuforia camera to the provided camera instance, if its available
+     * this function is for testing only at this stage
+     * @param newCamera the camera to switch to
+     */
+    @TestOnly
+    private void switchCamera(CameraInstance newCamera) {
 //        if (newCamera.isAvailable())
 //            frameManager.switchSwitchableCamera(newCamera);
         if (newCamera.isAvailable()) {

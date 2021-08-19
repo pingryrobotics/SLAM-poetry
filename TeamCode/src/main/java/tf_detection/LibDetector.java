@@ -5,7 +5,6 @@ import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
-import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
@@ -17,6 +16,11 @@ import java.util.List;
 
 import pathfinding.Visuals;
 
+/**
+ * LibDetector, or Library Detector, is for object detectors from external libraries, such as
+ * Google's ML kit, to use some of the same functionality provided by FIRST's object detector.
+ * At its current stage, it allows for projection onto the display
+ */
 abstract public class LibDetector {
 
     private final AppUtil appUtil = AppUtil.getInstance();

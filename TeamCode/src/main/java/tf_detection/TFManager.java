@@ -23,7 +23,6 @@ import java.util.concurrent.ExecutorService;
 import annotations.DistanceValues;
 import annotations.FieldCoordinates;
 import annotations.ImageCoordinates;
-import frame_source.CameraInstance;
 import frame_source.FrameManager;
 import pathfinding.CoordinateUtils;
 import pathfinding.Visuals;
@@ -232,38 +231,6 @@ public class TFManager {
 
             }
         });
-    }
-
-    public void startCameraStream(CameraInstance cameraInstance) {
-        int displayId = hardwareMap.appContext.getResources().getIdentifier(
-                "tfodMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        frameSupplier = frameManager.getFrameSupplier(cameraInstance, displayId);
-    }
-
-
-    /**
-     * Test function to test {@link frame_source.FrameManager}
-     */
-    public void updateCameraStream() {
-        if (!customDetector.needsNewFrame()) {
-            return;
-        }
-        Bitmap bitmap = frameSupplier.takeFrame();
-        if (bitmap != null) {
-//            Log.d(TAG, "TF taking frame from " + frameSupplier.getCameraInstance().name());
-            skippedFrames = 0;
-            customDetector.predict(bitmap);
-        } else {
-            skippedFrames++;
-            if (skippedFrames % 50 == 0)
-                Log.d(TAG, "Skipped " + skippedFrames + " frames");
-        }
-    }
-
-    public void switchCamera(CameraInstance newInstance) {
-        Log.d(TAG, "Attempting to switch to " + newInstance.name());
-        boolean result = frameSupplier.switchFrameSource(newInstance);
-        Log.d(TAG, "Successful? " + result);
     }
 
     /**
