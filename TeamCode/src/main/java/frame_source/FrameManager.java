@@ -119,7 +119,11 @@ public class FrameManager {
         return -1;
     }
 
-
+    /**
+     * Switches the supplier's camera source to the next item in its queue
+     * @param supplier the supplier to change
+     * @return true if it was successfully switched, otherwise false
+     */
     synchronized private boolean switchSupplierSource(@NonNull FrameSupplier supplier) {
         CameraInstance newCamera = supplier.switchRequestQueue.poll();
         // only process if the new camera isnt null, is available, and isnt the same camera
@@ -143,6 +147,11 @@ public class FrameManager {
 
     // region camera requests
 
+    /**
+     * Allows a camera instance to request a switchable camera
+     * @param callingInstance the calling camera instance
+     * @return true if the camera was successfully provided, otherwise false
+     */
     synchronized boolean requestCamera(CameraInstance callingInstance) {
         // if the instance is the vfc, it cant have a camera
         if (callingInstance == currentVFCamera) {
@@ -165,7 +174,7 @@ public class FrameManager {
         Log.d(TAG, "No unused camera found");
         // if we dont find one, we need to make a new one
         // no monitor sadge
-        SwitchableCameraImpl newSC = getSwitchableCamera(availableMonitorId);
+        SwitchableCameraImpl newSC = getSwitchableCamera();
         Log.d(TAG, "sc impl null? " + (newSC == null));
         availableMonitorId = 0;
         try {
@@ -187,7 +196,11 @@ public class FrameManager {
 
     // region switchable camera management
 
-    public SwitchableCameraImpl getSwitchableCamera(int displayMonitorId) {
+    /**
+     * Gets and initializes a switchable camera
+     * @return the switchable camera
+     */
+    public SwitchableCameraImpl getSwitchableCamera() {
 //        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(displayMonitorId);
         CameraManager cameraManager = ClassFactory.getInstance().getCameraManager();
         CameraName[] cameraNames = CameraInstance.getAvailableCameraNames()
@@ -207,6 +220,11 @@ public class FrameManager {
         return (SwitchableCameraImpl) ((SwitchableCamera) camera);
     }
 
+    /**
+     * Initializes a switchable camera by starting a capture session
+     * @param switchableCamera the switchable camera to initialize
+     * @throws CameraException if initialization fails
+     */
     private void initializeSwitchableCamera(@NonNull SwitchableCameraImpl switchableCamera) throws CameraException {
         synchronized (cameraLock) {
             final ContinuationSynchronizer<CameraCaptureSession> synchronizer = new ContinuationSynchronizer<>();
@@ -226,6 +244,13 @@ public class FrameManager {
         }
     }
 
+    /**
+     * Gets a capture session callback for managing what happens after a capture session is created
+     * @param cameraCharacteristics the characteristics of the camera
+     * @param switchableCamera the camera to get a callback for
+     * @param synchronizer the synchronizer to keep track of the state of the call chain
+     * @return the callback
+     */
     private CameraCaptureSession.StateCallback getCaptureSessionCallback(
             final CameraCharacteristics cameraCharacteristics,
             final SwitchableCameraImpl switchableCamera,
@@ -248,6 +273,13 @@ public class FrameManager {
         };
     }
 
+    /**
+     * Begins capturing frames for the specified camera
+     * @param session the capture session to capture through
+     * @param captureRequest the capture request, specifying the fps and resolution
+     * @param switchableCameraImpl the camera to capture with
+     * @throws CameraException if starting the capture session fails
+     */
     private void beginCapturing(
             @NonNull CameraCaptureSession session,
             @NonNull final CameraCaptureRequest captureRequest,

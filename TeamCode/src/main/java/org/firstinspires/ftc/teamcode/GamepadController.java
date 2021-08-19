@@ -200,7 +200,7 @@ public class GamepadController implements Gamepad.GamepadCallback {
 
     // enum of buttons that have floats as values rather than booleans
     public enum FloatButton {
-        LEFT_STICK_X,
+        LEFT_STICK_X, // FIXME: 8/19/21 right stick doesnt work correctly, idk why
         LEFT_STICK_Y,
         RIGHT_STICK_X,
         RIGHT_STICK_Y,
