@@ -19,6 +19,7 @@ import pathfinding.FieldMap;
 import pathfinding.SpaceMap;
 import pathfinding.Visuals;
 import pathfinding.VuforiaManager;
+import tf_detection.TFManager;
 
 
 @TeleOp(name="Pathfinding: Pathfinding OpMode", group="Testing")
@@ -42,8 +43,8 @@ public class PathfindingOpMode extends OpMode {
 
         Hashtable<SpaceMap.Space, ArrayList<OpenGLMatrix>> staticCoordsGL = new Hashtable<>();
         staticCoordsGL.put(SpaceMap.Space.IMAGE_TARGET, vuforiaManager.getLocTrackablesAsMatrices());
-
-        fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, null);
+        TFManager tfManager = new TFManager(hardwareMap, 0, vuforiaManager, TFManager.DetectorType.FTC_TFOD, false);
+        fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager, false);
     }
 
     @Override

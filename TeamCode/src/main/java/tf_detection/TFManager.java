@@ -15,7 +15,6 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ThreadPool;
 
 import org.firstinspires.ftc.robotcore.external.function.Consumer;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.SwitchableCamera;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -23,7 +22,6 @@ import java.util.concurrent.ExecutorService;
 import annotations.DistanceValues;
 import annotations.FieldCoordinates;
 import annotations.ImageCoordinates;
-import frame_source.FrameManager;
 import pathfinding.CoordinateUtils;
 import pathfinding.Visuals;
 import pathfinding.VuforiaManager;
@@ -136,15 +134,11 @@ public class TFManager {
             5,
             "teamcode.detector");
     private final DetectorType detectorType;
-    private VuforiaManager vuforiaManager;
+    private final VuforiaManager vuforiaManager;
     // tfod is the main tensorflow object detection object
     private final HardwareMap hardwareMap;
     private int skippedFrames;
     private CustomDetector customDetector;
-
-    private FrameManager frameManager;
-    private FrameManager.FrameSupplier frameSupplier;
-    private SwitchableCamera switchableCamera;
 
     /**
      * Initialize a custom object detector engine
@@ -164,7 +158,6 @@ public class TFManager {
         this.hardwareMap = hardwareMap;
         this.vuforiaManager = vuforiaManager;
         this.detectorType = detectorType;
-        this.frameManager = new FrameManager(hardwareMap);
         initCustomDetector(useDisplay);
 
         this.imageHeight = customDetector.getImageHeight();

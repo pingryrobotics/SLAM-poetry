@@ -7,8 +7,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.teamcode.GamepadController;
 import org.firstinspires.ftc.teamcode.GamepadController.ButtonState;
 import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
@@ -46,12 +44,12 @@ public class FieldmapOpMode extends OpMode {
         movementController = new GamepadController(gamepad1);
         vuforiaManager = new VuforiaManager(hardwareMap, fieldLength, false);
         TFManager tfManager = new TFManager(hardwareMap, cameraHeight, vuforiaManager,
-                TFManager.DetectorType.FTC_TFOD, false);
+                TFManager.DetectorType.FTC_TFOD, true);
 
         Hashtable<SpaceMap.Space, ArrayList<OpenGLMatrix>> staticCoordsGL = new Hashtable<>();
         staticCoordsGL.put(SpaceMap.Space.IMAGE_TARGET, vuforiaManager.getLocTrackablesAsMatrices());
 
-        fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager);
+        fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager, true);
     }
 
     @Override
@@ -75,19 +73,21 @@ public class FieldmapOpMode extends OpMode {
     public void runControls() {
 
         movementController.updateButtonStates();
-
-        for (VuforiaManager.LocalizationTrackable key : VuforiaManager.LocalizationTrackable.cachedValues()) {
-            /*
-             * getUpdatedRobotLocation() will return null if no new information is available since
-             * the last time that call was made, or if the trackable is not currently visible.
-             * getRobotLocation() will return null if the trackable is not currently visible.
-             */
-            VuforiaTrackable trackable = vuforiaManager.getLocalizationTrackable(key);
-            telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");
+        // update map
+        OpenGLMatrix location = vuforiaManager.getUpdatedRobotPosition();
+        if (location != null) {
+            fieldMap.update(location);
+            telemetry.addData("Robot position", VuforiaManager.format(location));
+        }  else {
+            Log.d(TAG, "no location");
+        }
+        // get trackable status
+        for (VuforiaManager.LocalizationTrackable trackable : VuforiaManager.LocalizationTrackable.cachedValues()) {
+            telemetry.addData(trackable.name(), vuforiaManager.isTrackableVisible(trackable) ? "Visible" : "Not Visible");
         }
 
         if (movementController.getButtonState(ToggleButton.A) == ButtonState.KEY_DOWN) {
-            OpenGLMatrix location = vuforiaManager.getUpdatedRobotPosition();
+            location = vuforiaManager.getUpdatedRobotPosition();
             if (location != null) {
                 Log.d(TAG, "mapping recognitions");
                 fieldMap.setRobotPosition(location);
@@ -100,12 +100,16 @@ public class FieldmapOpMode extends OpMode {
         }
 
         if (movementController.getButtonState(ToggleButton.B) == ButtonState.KEY_DOWN) {
-            OpenGLMatrix location = vuforiaManager.getUpdatedRobotPosition();
+            location = vuforiaManager.getUpdatedRobotPosition();
             if (location != null) {
                 Log.d(TAG, "printing transformations");
                 fieldMap.setRobotPosition(location);
                 fieldMap.checkDisappearances();
             }
+        }
+
+        if (movementController.getButtonState(ToggleButton.X) == ButtonState.KEY_DOWN) {
+            fieldMap.updateDisplay();
         }
 
         for (Detection detection : fieldMap.getRecognitions()) {

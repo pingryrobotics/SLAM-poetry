@@ -1,6 +1,9 @@
 package pathfinding;
 
 
+import static pathfinding.SpaceMap.Space;
+
+import android.graphics.Bitmap;
 import android.graphics.RectF;
 import android.util.Log;
 import android.util.Pair;
@@ -11,7 +14,6 @@ import androidx.annotation.Nullable;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -22,9 +24,8 @@ import annotations.FieldCoordinates;
 import annotations.ImageCoordinates;
 import annotations.MatrixCoordinates;
 import tf_detection.Detection;
+import tf_detection.DisplaySource;
 import tf_detection.TFManager;
-
-import static pathfinding.SpaceMap.Space;
 
 /**
  * The FieldMap is how the FTC field will be visualized for pathfinding purposes
@@ -74,7 +75,6 @@ import static pathfinding.SpaceMap.Space;
  */
 public class FieldMap {
 
-    static final File captureDirectory = AppUtil.ROBOT_DATA_DIR;
     static final String TAG = "vuf.test.fieldmap";
 
     // amount to extend reverse recognition image coordinates rects by
@@ -82,18 +82,20 @@ public class FieldMap {
     private static final int pxTolerance = 50;
 
     private static final int scale = 75; // value to scale the field values down by
-    // 10 is good for mm to cm for testing, 75 is nice for actual field mm to a managable size (~48x48)
+    public static final int bitmapDisplaySize = 300; // good size to make bitmaps on the display
+    // 10 is good for mm to cm for testing, 75 is nice for actual field mm to a manageable size (~48x48)
 
     // the x and y dimensions of the field are the same, so we have fieldSize
     private final int fieldSize;
 
-    // the amount that x and y field coordiantes are transformed for matrix positioning
+    // the amount that x and y field coordinates are transformed for matrix positioning
     private final int fieldTransform;
 
     private DLite dLite;
     private SpaceMap spaceMap;
     private final TFManager tfManager;
     private OpenGLMatrix robotPositionGL;
+    private DisplaySource displaySource;
 
     /**
      * Dynamic filled spaces are spaces filled with spots such as the robot, a temporary obstacle,
@@ -148,32 +150,45 @@ public class FieldMap {
      * matrix coordinates internally
      *
      * @note for faster computation, millimeters are scaled by the scale value
-     *
-     * @param fieldSizeMM The height and width of the field, in real millimeters
+     *@param fieldSizeMM The height and width of the field, in real millimeters
      * @param staticCoordsGL The static spaces on the field as OpenGLMatrix coordinates. Can be null
      * @param staticCoordsInt The static spaces on the field as int array coordinates. Can be null
      * @param tfManager the tensorflow manager to use with the fieldmap.
-     */
+     * @param useDisplay if true, projects the field map onto the robot's display
+     * */
     public FieldMap(
             int fieldSizeMM,
-            @Nullable @FieldCoordinates
-            Hashtable<Space, ArrayList<OpenGLMatrix>> staticCoordsGL,
-            @Nullable @FieldCoordinates
-            Hashtable<Space, ArrayList<int[]>> staticCoordsInt,
-            @NonNull TFManager tfManager) {
+            @Nullable @FieldCoordinates Hashtable<Space, ArrayList<OpenGLMatrix>> staticCoordsGL,
+            @Nullable @FieldCoordinates Hashtable<Space, ArrayList<int[]>> staticCoordsInt,
+            @NonNull TFManager tfManager,
+            boolean useDisplay) {
         // convert mm to cm
         this.fieldSize = fieldSizeMM / scale;
         this.fieldTransform = fieldSizeMM/2;
         this.tfManager = tfManager;
-        initialzeFieldMap();
+        initializeDisplay(useDisplay);
+        initializeFieldMap();
         initializeStaticFills(staticCoordsGL, staticCoordsInt);
+    }
+
+    /**
+     * Initialize the display source for projecting field map visuals to the robot's screen
+     * @param useDisplay whether to use the display or not
+     */
+    private void initializeDisplay(boolean useDisplay) {
+        int displayId = 0;
+        if (useDisplay) {
+            displayId = AppUtil.getDefContext().getResources().getIdentifier(
+                    "extraMonitorViewId", "id", AppUtil.getDefContext().getPackageName());
+        }
+        this.displaySource = new DisplaySource(displayId);
     }
 
     /**
      * Initializes all spots of the field map to clear, then adds walls
      * Also adds wall coordinates to static coordinate hashtable
      */
-    private void initialzeFieldMap() {
+    private void initializeFieldMap() {
         Log.d(TAG, "initializing field map");
         // create array of clear spaces with the height and width of the field
         spaceMap = new SpaceMap(fieldSize, fieldSize, fieldSize-2, 1);
@@ -218,7 +233,7 @@ public class FieldMap {
         for (Space space : joinedCoords.keySet()) {
             // x is first, y is second, so take those coords and set the corresponding coords in the spaceArray
             for (int[] xyPair : joinedCoords.get(space)) {
-                // x and y coordiantes are transformed for accurate positioning
+                // x and y coordinates are transformed for accurate positioning
                 // dont round to range because image targets are on walls
                 xyPair = fieldToMatrix(xyPair, false);
                 Log.d(TAG, String.format("x: %s, y: %s", xyPair[0], xyPair[1]));
@@ -239,6 +254,22 @@ public class FieldMap {
     // endregion initialization
 
     // region recognition mapping
+
+    public void update(OpenGLMatrix robotPositionGL) {
+        setRobotPosition(robotPositionGL);
+        checkDisappearances(); // check disappearances beforehand
+        updateDynamicPositions();
+        updateDisplay();
+    }
+
+    /**
+     * Update the display with the current spacemap
+     */
+    public void updateDisplay() {
+        Bitmap bitmap = Visuals.spaceMapToBitmap(spaceMap.getRawMap());
+        bitmap = Bitmap.createScaledBitmap(bitmap, bitmapDisplaySize, bitmapDisplaySize, false);
+        displaySource.updateImageView(bitmap);
+    }
 
     /**
      * Updates the dynamic positions based on tensorflow recognitions
@@ -284,7 +315,7 @@ public class FieldMap {
             }
 
         }
-        // cleardyn also removes from recognition list so we dont need to worry about it
+        // clear dyn also removes from recognition list so we dont need to worry about it
         clearDynamic(goneList);
     }
 
@@ -549,7 +580,7 @@ public class FieldMap {
             return;
 
         if (dynamicFilledSpaces.get(space) == null) {
-            dynamicFilledSpaces.put(space, new ArrayList<int[]>());
+            dynamicFilledSpaces.put(space, new ArrayList<>());
         }
 
         ArrayList<int[]> dynCoords = dynamicFilledSpaces.get(space);
@@ -597,7 +628,7 @@ public class FieldMap {
             spaceMap.setSpace(xyPair, Space.CLEAR);
             // remove from recognition list if it exists
             recognitionFieldPositions.remove(xyPair);
-            // try and remove coordinate from dyn hashtable, if its not there then itll throw an error
+            // try and remove coordinate from dyn hashtable, if its not there then it'll throw an error
             // which we ignore. if the space is CLEAR, then the error will be thrown and we dont care
             try {
                 ArrayList<int[]> dynCoords = dynamicFilledSpaces.get(oldSpace);
@@ -713,7 +744,7 @@ public class FieldMap {
 
     // region pathfinding
     /**
-     * Pathfind with the A* algorithm on the current fieldmap to the specified endcoords
+     * Pathfind with the A* algorithm on the current fieldmap to the specified end coords
      * @param end_field_coords the target coordinates, in field coordinates
      * @return a spaceMap with the path plotted out
      */
@@ -730,7 +761,7 @@ public class FieldMap {
     }
 
     /**
-     * Pathfind with the D* Lite algorithm on the current fieldmap to the specified endcoords
+     * Pathfind with the D* Lite algorithm on the current fieldmap to the specified end coords
      * @param end_field_coords the target coordinates, in field coordinates
      * @return a spaceMap with the path plotted out, or null if no path could be calculated
      */

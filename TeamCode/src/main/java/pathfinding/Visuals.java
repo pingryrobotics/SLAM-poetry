@@ -117,6 +117,22 @@ public class Visuals {
     }
 
     /**
+     * Converts a color array to a bitmap
+     * @param colorArray A 1d array of colors
+     * @param yWidth The width of the image/bitmap
+     * @param xHeight The height of the bitmap
+     * @return A bitmap from the color array
+     */
+    @NonNull
+    private static Bitmap colorsToBitmap(@ColorInt @NonNull int[] colorArray, int yWidth, int xHeight, int stride) {
+        Bitmap bitmap = Bitmap.createBitmap(colorArray, 0, stride, yWidth, xHeight, Bitmap.Config.ARGB_8888);
+        Log.d(TAG, "converted colors to bitmap");
+        Log.d(TAG, "success");
+        return bitmap;
+    }
+
+
+    /**
      * Converts a FieldMap space array to an array of colors
      * @param spaceMap the spacemap to convert
      * @return A 1d array of the colors corrosponding to pixels on a bitmap
@@ -137,6 +153,16 @@ public class Visuals {
             }
         }
         return intArr;
+    }
+
+    /**
+     * Converts a spacemap to a bitmap
+     * @param spaceMap the spacemap to convert
+     * @return the bitmap
+     */
+    public static Bitmap spaceMapToBitmap(SpaceMap.Space[][] spaceMap) {
+        int[] colors = spaceArrayToColors(spaceMap);
+        return colorsToBitmap(colors, spaceMap.length, spaceMap[0].length);
     }
 
     /**

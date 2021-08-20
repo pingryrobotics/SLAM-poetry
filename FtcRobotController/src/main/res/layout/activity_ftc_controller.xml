@@ -67,18 +67,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
       android:textStyle="bold"/>
 
     <ImageButton
-      android:id="@+id/menu_buttons"
-      android:scaleType="fitXY"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:src="@drawable/icon_menu"
-      android:background="@android:color/transparent"
-      android:padding="15dp"
-      android:adjustViewBounds="true"
-      android:layout_alignParentEnd="true"
-      android:layout_centerInParent="true"
-      android:layout_centerHorizontal="true"
-      android:layout_margin="10dp"/>
+        android:id="@+id/menu_buttons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_centerInParent="true"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="10dp"
+        android:adjustViewBounds="true"
+        android:background="@android:color/transparent"
+        android:padding="15dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/icon_menu"
+        tools:ignore="SpeakableTextPresentCheck" />
 
   </RelativeLayout>
   <!-- end of black bar -->
@@ -132,14 +135,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           android:layout_height="match_parent"
           android:orientation="vertical">
 
+        <FrameLayout
+            android:id="@+id/extraMonitorViewId"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/cameraMonitorViewId"
-            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:orientation="vertical"
-            />
+            android:visibility="gone" />
         <FrameLayout
             android:id="@+id/tfodMonitorViewId"
             android:visibility="gone"

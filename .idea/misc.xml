@@ -4,6 +4,9 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="../../../../../../../../layout/custom_preview.xml" value="0.21041666666666667" />
+        <entry key="FtcRobotController/src/main/res/layout/activity_ftc_controller.xml" value="0.22826086956521738" />
+        <entry key="FtcRobotController/src/main/res/menu/ftc_robot_controller.xml" value="0.3515625" />
+        <entry key="FtcRobotController/src/main/res/xml/app_settings.xml" value="0.22826086956521738" />
       </map>
     </option>
   </component>
