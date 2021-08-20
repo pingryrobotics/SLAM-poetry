@@ -5,6 +5,7 @@ import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
@@ -12,25 +13,32 @@ import androidx.annotation.NonNull;
 
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
-import java.util.List;
-
-import pathfinding.Visuals;
-
 /**
- * LibDetector, or Library Detector, is for object detectors from external libraries, such as
- * Google's ML kit, to use some of the same functionality provided by FIRST's object detector.
- * At its current stage, it allows for projection onto the display
+ * DisplaySource is a class for projecting a stream of bitmaps onto the robot's display
  */
-abstract public class LibDetector {
+public class DisplaySource {
 
     private final AppUtil appUtil = AppUtil.getInstance();
     private ImageView imageView;
-    private final static String TAG = "vuf.test.libdetector";
+    private final static String TAG = "vuf.test.displaysource";
+    private final boolean activeDisplay;
+
+    public DisplaySource(int displayId) {
+        Log.d(TAG, "display id " + displayId);
+        if (displayId != 0) {
+            initImageView(displayId);
+            activeDisplay = true;
+        } else {
+            activeDisplay = false;
+        }
+    }
+
+
     /**
      * Initializes an image view for displaying a live feed of frames to the robot
      * @param monitorViewIdParent the id of monitor view to use for displaying frames
      */
-    protected void initImageView(int monitorViewIdParent) {
+    private void initImageView(int monitorViewIdParent) {
         final Activity activity = appUtil.getRootActivity();
         final ViewGroup imageViewParent = activity.findViewById(monitorViewIdParent);
 
@@ -38,6 +46,7 @@ abstract public class LibDetector {
             appUtil.synchronousRunOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    Log.d(TAG, "Updating ui");
                     imageView = new ImageView(activity);
                     imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
                     imageView.setLayoutParams(new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
@@ -45,32 +54,24 @@ abstract public class LibDetector {
                     imageViewParent.setVisibility(VISIBLE);
                 }
             });
+        } else {
+            Log.d(TAG, "view parent null");
         }
     }
 
     /**
      * Updates the image view with a new image
-     * @param predictedImage the image to use
-     * @param detectionList the detections to draw onto the image
+     * @param bitmap the image to project
      */
-    protected void updateImageView(@NonNull final Bitmap predictedImage, @NonNull List<?> detectionList) {
-        if (detectionList.size() > 0)
-            Visuals.drawMLPredictions(predictedImage, convertToDetection(detectionList));
-        appUtil.synchronousRunOnUiThread(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        imageView.setImageBitmap(predictedImage);
-                    }
-                });
+    public void updateImageView(@NonNull final Bitmap bitmap) {
+        if (activeDisplay) {
+            appUtil.synchronousRunOnUiThread(
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            imageView.setImageBitmap(bitmap);
+                        }
+                    });
+        }
     }
-
-    /**
-     * Converts from the ml library's prediction class into our Detection class
-     * @param predictionList the list of native predictions to convert
-     * @return the converted predictions, as a list of {@link Detection} objects
-     */
-    @NonNull
-    protected abstract List<Detection> convertToDetection(@NonNull List<?> predictionList);
-
 }

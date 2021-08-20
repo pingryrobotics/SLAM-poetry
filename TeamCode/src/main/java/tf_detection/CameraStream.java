@@ -11,18 +11,13 @@ import java.util.List;
 /**
  * Test class to test FrameManager's camera switching
  */
-public class CameraStream extends LibDetector implements CustomDetector {
+public class CameraStream extends DisplaySource implements CustomDetector {
     
     public CameraStream(int monitorViewId) {
-        initImageView(monitorViewId);
+        super(monitorViewId);
     }
-    
 
-    @NonNull
-    @Override
-    protected List<Detection> convertToDetection(@NonNull List<?> predictionList) {
-        return new ArrayList<>();
-    }
+
 
     /**
      * Initialize the object detector
@@ -61,7 +56,7 @@ public class CameraStream extends LibDetector implements CustomDetector {
      */
     @Override
     public void predict(@NonNull Bitmap bitmap) {
-        updateImageView(bitmap, new ArrayList<Detection>());
+        updateImageView(bitmap);
     }
 
     /**

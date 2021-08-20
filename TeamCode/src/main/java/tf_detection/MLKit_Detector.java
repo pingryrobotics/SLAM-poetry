@@ -17,11 +17,13 @@ import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
 import java.util.ArrayList;
 import java.util.List;
 
+import pathfinding.Visuals;
+
 /**
  * Class for object detection with Google's ML Kit
  * https://developers.google.com/ml-kit/vision/object-detection/android
  */
-public class MLKit_Detector extends LibDetector implements CustomDetector {
+public class MLKit_Detector extends DisplaySource implements CustomDetector {
     public static final String TAG = "vuf.test.ml_detector";
 
     private ObjectDetector objectDetector;
@@ -51,13 +53,12 @@ public class MLKit_Detector extends LibDetector implements CustomDetector {
      *                            no display will be used
      */
     public MLKit_Detector(float minResultConfidence, int monitorViewIdParent) {
+        super(monitorViewIdParent);
         this.minimumConfidence = minResultConfidence;
         latestDetections = new ArrayList<>(); // for non nullability
         newDetectionsAvailable = false;
         useDisplay = (monitorViewIdParent != 0); // true if it isn't 0
         predictionQueueLength = 0;
-        if (useDisplay)
-            initImageView(monitorViewIdParent);
     }
 
     /**
@@ -231,7 +232,7 @@ public class MLKit_Detector extends LibDetector implements CustomDetector {
                     latestResultBitmap = predictionBitmap; // update latest bitmap
 
                     if (useDisplay) {
-                        updateImageView(predictionBitmap, detectedObjects);
+                        updateDisplay(predictionBitmap, detectedObjects);
                     }
 
                 } else {
@@ -240,6 +241,12 @@ public class MLKit_Detector extends LibDetector implements CustomDetector {
 
             }
         };
+    }
+
+    private void updateDisplay(Bitmap predictedImage, List<DetectedObject> detectionList) {
+        if (detectionList.size() > 0)
+            Visuals.drawMLPredictions(predictedImage, convertToDetection(detectionList));
+        updateImageView(predictedImage);
     }
 
 }

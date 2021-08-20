@@ -59,7 +59,7 @@ public class FTC_Detector implements CustomDetector {
      * @return a list of detections from the recognitions
      */
     @NonNull
-    private List<Detection> convertRecognitionToDetection(@NonNull List<Recognition> recognitionList) {
+    private List<Detection> convertToDetection(@NonNull List<Recognition> recognitionList) {
 
         ArrayList<Detection> detectionList = new ArrayList<>();
         for (Recognition recognition : recognitionList) {
@@ -82,7 +82,7 @@ public class FTC_Detector implements CustomDetector {
         List<Recognition> recognitionList = tfod.getUpdatedRecognitions();
         if (recognitionList == null)
             return null;
-        return convertRecognitionToDetection(recognitionList);
+        return convertToDetection(recognitionList);
     }
 
     /**
@@ -97,7 +97,7 @@ public class FTC_Detector implements CustomDetector {
         if (recognitionList == null)
             recognitionList = new ArrayList<>();
 
-        return convertRecognitionToDetection(recognitionList);
+        return convertToDetection(recognitionList);
     }
 
     /**
