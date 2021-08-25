@@ -15,6 +15,7 @@ import com.vuforia.PIXEL_FORMAT;
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.function.Consumer;
 import org.firstinspires.ftc.robotcore.external.function.Continuation;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.SwitchableCamera;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -25,6 +26,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
+import org.firstinspires.ftc.robotcore.internal.camera.calibration.CameraCalibration;
 import org.jetbrains.annotations.TestOnly;
 
 import java.text.SimpleDateFormat;
@@ -135,10 +137,16 @@ public class VuforiaManager {
         parameters.vuforiaLicenseKey = vuforiaLicenseKey;
         parameters.useExtendedTracking = true; // disable for memory testing
 
+
         // set camera direction
         parameters.cameraDirection = cameraDirection;
+        List<CameraName> cameraNames = CameraInstance.getAvailableCameraNames();
+        if (cameraNames.size() > 0) {
+            parameters.cameraName = cameraNames.get(0);
+            Log.d(TAG, "Adding camera to vuforia");
+        }
         // get switchable camera and initialize vuforia
-        // see FrameManager for info on this
+        // see FrameManager for cameraInfo on this
 //        availableCameras = frameManager.requestSwitchableCamera(new Function<SwitchableCameraName, VuforiaLocalizer>() {
 //            @Override
 //            public VuforiaLocalizer apply(SwitchableCameraName arg) {
@@ -168,7 +176,7 @@ public class VuforiaManager {
      * Initialize the trackable objects
      * Custom datasets can be added here:
      * https://developer.vuforia.com/target-manager
-     * See the comments in the source github (linked above this class) for more info
+     * See the comments in the source github (linked above this class) for more cameraInfo
      *
      * Currently, this is just using the defaults from the source
      */
@@ -284,9 +292,9 @@ public class VuforiaManager {
 
 
     /**
-     * Extracts positioning info from a transformation matrix and returns it as a readable string
+     * Extracts positioning cameraInfo from a transformation matrix and returns it as a readable string
      * Taken from the github
-     * @param transformationMatrix The matrix to get info from
+     * @param transformationMatrix The matrix to get cameraInfo from
      * @return the information as a readable string
      */
     public static String format(OpenGLMatrix transformationMatrix) {
@@ -447,6 +455,8 @@ public class VuforiaManager {
             switchableCamera.setActiveCamera(newCamera.getWebcamName());
         }
     }
+
+    public CameraCalibration getCameraCalibration() { return vuforiaLocalizer.getCameraCalibration(); }
 
 
 

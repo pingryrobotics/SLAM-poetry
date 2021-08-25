@@ -1,10 +1,5 @@
 package tf_detection;
 
-import static java.lang.Math.abs;
-import static java.lang.Math.atan;
-import static java.lang.Math.tan;
-import static java.lang.Math.toRadians;
-
 import android.graphics.Bitmap;
 import android.util.Log;
 
@@ -19,9 +14,6 @@ import org.firstinspires.ftc.robotcore.external.function.Consumer;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import annotations.DistanceValues;
-import annotations.FieldCoordinates;
-import annotations.ImageCoordinates;
 import pathfinding.CoordinateUtils;
 import pathfinding.Visuals;
 import pathfinding.VuforiaManager;
@@ -121,15 +113,8 @@ public class TFManager {
 
     // tensorflow min confidence to be considered a recognition
     private static final float minResultConfidence = 0.8f;
-
-    private static final double vAOV = 37.13; // vertical angle of view
-    private static final double hAOV = 66.1; // horizontal angle of view
-    private static final double toComplement = 90; // subtract by 90 for complement
     public final double imageHeight; // image height, in pixels
     public final double imageWidth; // image width, in pixels
-    private final double vPPA; // vertical pixels per angle
-    private final double hPPA; // horizontal pixels per angle
-    private final double cameraHeightMM;
     private final ExecutorService detectionThreads = ThreadPool.newFixedThreadPool(
             5,
             "teamcode.detector");
@@ -143,18 +128,15 @@ public class TFManager {
     /**
      * Initialize a custom object detector engine
      * @param hardwareMap the hardware map for the robot
-     * @param cameraHeightMM the camera height in millimeters (BE EXACT)
      * @param vuforiaManager the vuforia manager to assist in retrieving frames
      * @param detectorType the object detector {@link DetectorType} to use
      * @param useDisplay if true, displays the frames from the object detector on screen
      */
     public TFManager(
             @NonNull HardwareMap hardwareMap,
-            double cameraHeightMM,
             @NonNull VuforiaManager vuforiaManager,
             @NonNull DetectorType detectorType, boolean useDisplay)
              {
-        this.cameraHeightMM = cameraHeightMM;
         this.hardwareMap = hardwareMap;
         this.vuforiaManager = vuforiaManager;
         this.detectorType = detectorType;
@@ -162,8 +144,6 @@ public class TFManager {
 
         this.imageHeight = customDetector.getImageHeight();
         this.imageWidth = customDetector.getImageWidth();
-        this.vPPA = imageHeight/vAOV;
-        this.hPPA = imageWidth/hAOV;
     }
 
 
@@ -254,8 +234,8 @@ public class TFManager {
         List<Detection> latestDetections = customDetector.getLatestDetections();
         Log.d(TAG, "Total detections: " + latestDetections.size());
         for (Detection detectedObject : latestDetections) {
-            Log.d(TAG, "Label: " + detectedObject.label);
-            Log.d(TAG, "Bounding box: " + CoordinateUtils.rectToString(detectedObject.rectF));
+            Log.d(TAG, "Label: " + detectedObject.getLabel());
+            Log.d(TAG, "Bounding box: " + CoordinateUtils.rectToString(detectedObject.getRectF()));
         }
         Bitmap resultBitmap = customDetector.getLatestBitmap();
         if (resultBitmap != null) {
@@ -274,153 +254,6 @@ public class TFManager {
      */
     public int getDetectionCount() {
         return customDetector.getLatestDetections().size();
-    }
-
-    /**
-     * Get straight distance to a detection based on the angle of depression to the object and the
-     * camera height.
-     * This is the distance we would need to move forward to be horizontally in line
-     * with the object.
-     * @param detection the detection to find the distance to
-     * @return the distance to the object, in mm (or the unit camera height was specified in)
-     */
-    private double getStraightDistance(@NonNull Detection detection) {
-
-        float bottomPx = detection.getBottom(); // pixel of the bottom of the detection
-        double pxToObj = abs(imageHeight/2 - bottomPx); // pixel offset from center of image
-        double angleOfDepression = pxToObj/vPPA; // Use the pixels per angle to get the angle of dep.
-         // units: px/1 * 1/A/px (or px/A) = angle
-
-        // calculate complement of angle
-        double angleToObject = toComplement - angleOfDepression;
-
-        // get distance to object using angle as radians
-        //        Log.d(TAG, String.format("Bottom y: %s,\n" +
-//                        "pxToObj: %s,\n" +
-//                        "Angle of dep: %s,\n" +
-//                        "Angle to object: %s,\n" +
-//                        "dist to obj: %s mm",
-//                bottomPx, pxToObj, angleOfDepression, angleToObject, distToObj));
-        // distance to object
-        return cameraHeightMM * tan(toRadians(angleToObject));
-    }
-
-    /**
-     * Get the side distance to the detection based on the straight distance and the
-     * horizontal angle to the object. The side distance is the distance we would need to move
-     * horizontally to have the object right in front of us.
-     *
-     * Since ftc's tensorflow library actually has a way to find the angle, we could just use theirs,
-     * but ours is more applicable to custom models and their accuracies are very similar,
-     * so we're going to use our calculated angle instead.
-     * Either way, we need to use our straight distance, so it isnt a huge difference.
-     *
-     * @param detection the detection to find the side distance to
-     * @param straightDist the straight distance to the detection
-     * @return the calculated side distance. Left is negative, right is positive
-     */
-    private double getSideDistance(@NonNull Detection detection, double straightDist) {
-        float centerPx = detection.getCenterX(); // center of left and right
-
-        // pixel offset from center.
-        // subtracting by side -> left, so left needs to be positive
-        double pxToObj = imageWidth/2 - centerPx;
-        double angleToObj = pxToObj/hPPA;
-        // tf calculation for comparison
-//        double angleToObjTF = detection.estimateAngleToObject(AngleUnit.DEGREES);
-//        Log.d(TAG, String.format("Calculated angle: %s, TF angle: %s", angleToObj, angleToObjTF));
-//        double distToObjTF = straightDist * tan(toRadians(angleToObjTF));
-//        Log.d(TAG, String.format("Calculated distance: %s, TF distance: %s", distToObj, distToObjTF));
-        // distance to object
-        return straightDist * tan(toRadians(angleToObj));
-    }
-
-    /**
-     * Gets straight (forwards) and side (horizontal) distances to a recognition.
-     * The straight distance is how far we need to move forwards to be horizontally
-     * in line with the object, while the side distance is the distance we would need to move
-     * horizontally to have the object straight in front of us.
-     * @param detection the recognition to find distances to
-     * @return the distances to the object in cameraHeight units, in {straight, side} form
-     */
-    @NonNull
-    @FieldCoordinates
-    @DistanceValues
-    public double[] getDistances(@NonNull Detection detection) {
-        double straightDist = getStraightDistance(detection);
-        double sideDist = getSideDistance(detection, straightDist);
-        return new double[] {straightDist, sideDist};
-    }
-
-    /**
-     * Gets the location on an image that would correspond to a set of distances
-     * @param distances the distances to find the pixel position from
-     * @return the pixel coordinates {vert, horizontal}, or null if they're offscreen
-     */
-    @Nullable
-    @ImageCoordinates
-    public float[] getPixelCoordinatesFromDistances(
-            @NonNull @FieldCoordinates @DistanceValues float[] distances) {
-        float straight = distances[0];
-        float side = distances[1];
-        // if its behind the camera, its not gona be in front of it
-        if (straight < 0) {
-            Log.d(TAG, "Straight dist is less than 0: " + straight);
-            return null;
-        }
-        float sidePx = getSidePixelCoordinate(straight, side);
-        Log.d(TAG, "Side px: " + sidePx);
-        // check if the x pixel is out of frame
-        if (sidePx >= 0 && sidePx <= imageWidth) {
-            float straightPx = getStraightPixelCoordinate(straight);
-            Log.d(TAG, "Straight px: " + straightPx);
-            // check if y is out of frame
-            if (straightPx >= 0 && straightPx <= imageHeight) {
-                // if theyre both in frame, then the coordinate is in frame
-                return new float[] {straightPx, sidePx};
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Gets the pixel y value (vertical) on an image from a distance
-     *
-     * This calculation is just the inverse of the pixel to distance calculation.
-     * You use atan, or inverse tan, to get the angle from the ratio of the opposite and adjacent sides,
-     * then subtract from 90 to get the complement of that, then multiply by pixels per angle
-     * to get the number of pixels from that angle. Then, we add half the image height
-     * since that value was the offset from the center.
-     *
-     * @param straight the straight distance to get the pixel value for
-     * @return the pixel value
-     */
-    private float getStraightPixelCoordinate(@DistanceValues double straight) {
-        double angleToObject = Math.toDegrees(atan(straight/cameraHeightMM));
-        double angleOfDepression = toComplement - angleToObject;
-        double pixelsToObject = vPPA * angleOfDepression;
-        double verticalPixel = pixelsToObject + (imageHeight/2);
-
-        Log.d(TAG, "Straight px to object: " + pixelsToObject);
-       return (float) verticalPixel;
-    }
-
-    /**
-     * Gets the pixel x value (horizontal) on an image from a distance
-     * see getStraightPixelCoordinate comment for info on this calculation. This one is
-     * slightly different because the side ratio is different and we don't need the complement.
-     *
-     * @param straight the straight value. used in calculations because we need opposite/adjacent side
-     * @param side the side value to get the distance for
-     * @return the pixel value
-     */
-    private float getSidePixelCoordinate(@DistanceValues double straight, @DistanceValues double side) {
-
-        double angleToObject = Math.toDegrees(atan(side/straight));
-        double pixelsToObject = hPPA * angleToObject;
-        Log.d(TAG, "Side px to object: " + pixelsToObject);
-        double horizontalPixel = (imageWidth/2) - pixelsToObject;
-        return (float) horizontalPixel;
     }
 
 
