@@ -44,7 +44,7 @@ public class StressTestOpMode extends OpMode {
     public void init() {
         movementController = new GamepadController(gamepad1);
         vuforiaManager = new VuforiaManager(hardwareMap);
-        tfManager = new TFManager(hardwareMap, cameraHeight, vuforiaManager,
+        tfManager = new TFManager(hardwareMap, vuforiaManager,
                 TFManager.DetectorType.ML_Kit, true);
 
     }
@@ -96,7 +96,7 @@ public class StressTestOpMode extends OpMode {
         // get updated recognitions, but only if there's changes
         if (updatedDetections != null) {
             for (Detection detection : updatedDetections) {
-                telemetry.addData(detection.label,
+                telemetry.addData(detection.getLabel(),
                         "Top: %s, Bottom: %s, Left: %s, Right: %s ",
                         detection.getTop(), detection.getBottom(), detection.getLeft(), detection.getRight());
             }

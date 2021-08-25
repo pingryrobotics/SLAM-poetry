@@ -49,8 +49,8 @@ public class Visuals {
         labelPaint.setColor(Color.BLUE);
 
         for (Detection detectedObject : detectedObjects) {
-            canvas.drawRect(detectedObject.rectF, bboxPaint);
-            canvas.drawText(detectedObject.label, detectedObject.getCenterX(), detectedObject.getBottom(), labelPaint);
+            canvas.drawRect(detectedObject.getRectF(), bboxPaint);
+            canvas.drawText(detectedObject.getLabel(), detectedObject.getCenterX(), detectedObject.getBottom(), labelPaint);
         }
     }
 

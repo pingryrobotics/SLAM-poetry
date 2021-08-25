@@ -4,13 +4,13 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 
 /**
- * The detection class generalizes all detections from various object detectors
+ * The immutable detection class generalizes all detections from various object detectors
  */
 public class Detection {
 
-    public final RectF rectF;
-    public final String label;
-    public final float confidence;
+    private final RectF rectF;
+    private final String label;
+    private final float confidence;
 
     /**
      * Create a new immutable detection with the given parameters
@@ -36,8 +36,7 @@ public class Detection {
         this.confidence = confidence;
     }
 
-    // accessors even though rectf is public, just so there's less direct access to the rectf since
-    // its pretty mutable
+    // accessors because detection is immutable
     public float getTop() {return rectF.top; }
     public float getBottom() {return rectF.bottom; }
     public float getLeft() {return rectF.left; }
@@ -45,5 +44,5 @@ public class Detection {
     public float getCenterX() {return rectF.centerX(); }
     public float getCenterY() {return rectF.centerY(); }
     public String getLabel() {return label; }
-
+    public RectF getRectF() { return new RectF(rectF); } // gets a copy
 }
