@@ -1,18 +1,13 @@
 package org.firstinspires.ftc.teamcode;
 
-import android.util.Log;
-
-import androidx.annotation.NonNull;
-
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import java.util.Hashtable;
 
 /**
  * Class that acts as a wrapper for the gamepad to make getting the keydown, keyup, etc state easier
- * Also automatically updates when the gamepad updates
  */
-public class GamepadController implements Gamepad.GamepadCallback {
+public class GamepadController {
 
     private static final String TAG = "vuf.test.gpcontroller";
 
@@ -28,14 +23,13 @@ public class GamepadController implements Gamepad.GamepadCallback {
 
 
 
-
-
     /**
      * Initializes the gamepad controller and sets initial values for the controller states
      * @param gamepad The gamepad to wrap with state functionality
      */
     public GamepadController(Gamepad gamepad) {
         this.gamepad = gamepad;
+
         // initialize dicts
         controllerToggleStates = new Hashtable<ToggleButton, ButtonState>();
         gamepadToggleValues = new Hashtable<ToggleButton, Boolean>();
@@ -56,21 +50,6 @@ public class GamepadController implements Gamepad.GamepadCallback {
         }
 
         updateButtonStates();
-    }
-
-    /**
-     * Update the controllers's state values when the gamepad is updated
-     * Automatically called when a gamepad is updated
-     * @param updatedGamepad the updated gamepad
-     */
-    @Override
-    public void gamepadChanged(@NonNull Gamepad updatedGamepad) {
-        // @note make sure this works
-        // it doesnt lol
-        Log.d(TAG, "gamepad changed");
-        if (updatedGamepad.equals(gamepad)) {
-            updateButtonStates();
-        }
     }
 
     /**

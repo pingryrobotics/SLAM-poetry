@@ -16,6 +16,7 @@ import java.util.List;
 
 public class FTC_Detector implements CustomDetector {
 
+    private static final String TAG = "vuf.test.ftc_det";
     private static final int imageHeight = 720;
     private static final int imageWidth = 1280;
     private final float minResultConfidence;
@@ -65,6 +66,7 @@ public class FTC_Detector implements CustomDetector {
         for (Recognition recognition : recognitionList) {
             RectF rectf = new RectF(recognition.getLeft(), recognition.getTop(),
                     recognition.getRight(), recognition.getBottom());
+//            Log.d(TAG, "ftc horizontal angle: " + recognition.estimateAngleToObject(AngleUnit.DEGREES));
             detectionList.add(new Detection(rectf, recognition.getLabel(), recognition.getConfidence()));
         }
         return detectionList;
