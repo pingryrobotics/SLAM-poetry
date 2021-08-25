@@ -15,7 +15,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.NoSuchElementException;
 
 import annotations.AnyCoordinateRange;
@@ -29,6 +29,7 @@ import annotations.FieldCoordinates;
 public class CoordinateUtils {
 
     private static final String TAG = "vuf.test.coordinate_utils";
+    public static final long nanoToMilli = 1000000;
 
     // region merge coordinate forms
 
@@ -40,14 +41,14 @@ public class CoordinateUtils {
      */
     @NonNull
     @FieldCoordinates
-    protected static Hashtable<SpaceMap.Space, ArrayList<int[]>> joinCoordinateHashtables(
-            @Nullable @FieldCoordinates Hashtable<SpaceMap.Space, ArrayList<int[]>> coordsInt,
-            @Nullable @FieldCoordinates Hashtable<SpaceMap.Space, ArrayList<OpenGLMatrix>> coordsGL) {
+    protected static HashMap<SpaceMap.Space, ArrayList<int[]>> joinCoordinateHashtables(
+            @Nullable @FieldCoordinates HashMap<SpaceMap.Space, ArrayList<int[]>> coordsInt,
+            @Nullable @FieldCoordinates HashMap<SpaceMap.Space, ArrayList<OpenGLMatrix>> coordsGL) {
 
         // set each hashtable to an empty table if theyre null
-        coordsGL = (coordsGL == null) ? new Hashtable<SpaceMap.Space, ArrayList<OpenGLMatrix>>() : coordsGL;
+        coordsGL = (coordsGL == null) ? new HashMap<SpaceMap.Space, ArrayList<OpenGLMatrix>>() : coordsGL;
         // create a deep copy of the int coordinate hashtable
-        Hashtable<SpaceMap.Space, ArrayList<int[]>> newCoordsInt = deepCopyCoordsInt(coordsInt);
+        HashMap<SpaceMap.Space, ArrayList<int[]>> newCoordsInt = deepCopyCoordsInt(coordsInt);
         // now both hashtables are non null
 
         Log.d(FieldMap.TAG, "joining values");
@@ -152,10 +153,10 @@ public class CoordinateUtils {
      */
     @NonNull
     @AnyCoordinateRange
-    protected static Hashtable<SpaceMap.Space, ArrayList<int[]>> deepCopyCoordsInt(
-            @Nullable @AnyCoordinateRange Hashtable<SpaceMap.Space, ArrayList<int[]>> coordsInt) {
+    protected static HashMap<SpaceMap.Space, ArrayList<int[]>> deepCopyCoordsInt(
+            @Nullable @AnyCoordinateRange HashMap<SpaceMap.Space, ArrayList<int[]>> coordsInt) {
 
-        Hashtable<SpaceMap.Space, ArrayList<int[]>> coordsIntCloned = new Hashtable<>();
+        HashMap<SpaceMap.Space, ArrayList<int[]>> coordsIntCloned = new HashMap<>();
         // deep copy hashtable
         if (coordsInt != null) {
             // loop through spaces with values

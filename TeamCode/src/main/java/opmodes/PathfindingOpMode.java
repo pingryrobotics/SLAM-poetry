@@ -13,12 +13,14 @@ import org.firstinspires.ftc.teamcode.GamepadController.ButtonState;
 import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.HashMap;
 
 import pathfinding.FieldMap;
 import pathfinding.SpaceMap;
 import pathfinding.Visuals;
 import pathfinding.VuforiaManager;
+import pixel_distances.FocalDistances;
+import pixel_distances.PixelDistances;
 import tf_detection.TFManager;
 
 
@@ -29,6 +31,7 @@ public class PathfindingOpMode extends OpMode {
     private GamepadController movementController;
     private GamepadController mechanismController;
     private FieldMap fieldMap;
+    private PixelDistances pixelDistances;
     private VuforiaManager vuforiaManager;
     private static final String TAG = "vuf.test.pathfindingOp";
 
@@ -41,10 +44,11 @@ public class PathfindingOpMode extends OpMode {
         movementController = new GamepadController(gamepad1);
         vuforiaManager = new VuforiaManager(hardwareMap, fieldLength, false);
 
-        Hashtable<SpaceMap.Space, ArrayList<OpenGLMatrix>> staticCoordsGL = new Hashtable<>();
+        HashMap<SpaceMap.Space, ArrayList<OpenGLMatrix>> staticCoordsGL = new HashMap<>();
         staticCoordsGL.put(SpaceMap.Space.IMAGE_TARGET, vuforiaManager.getLocTrackablesAsMatrices());
-        TFManager tfManager = new TFManager(hardwareMap, 0, vuforiaManager, TFManager.DetectorType.FTC_TFOD, false);
-        fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager, false);
+        TFManager tfManager = new TFManager(hardwareMap, vuforiaManager, TFManager.DetectorType.FTC_TFOD, false);
+        pixelDistances = new FocalDistances(0, vuforiaManager.getCameraCalibration());
+        fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager, pixelDistances, false);
     }
 
     @Override
@@ -88,7 +92,7 @@ public class PathfindingOpMode extends OpMode {
 
                 int[] targetCoords = new int[] {75, 75};
                 fieldMap.setRobotPosition(location);
-                fieldMap.setDynamic(SpaceMap.Space.TARGET_LOCATION, null, targetCoords, true);
+                fieldMap.getSpaceMap().setSpace(SpaceMap.Space.TARGET_LOCATION, targetCoords, true);
                 Visuals.fieldMapToImage(fieldMap, "A_pre");
                 long startTime = System.nanoTime();
 
@@ -114,8 +118,8 @@ public class PathfindingOpMode extends OpMode {
             if (location != null) {
                 try {
                     fieldMap.setRobotPosition(location);
-                    fieldMap.setDynamic(SpaceMap.Space.TARGET_LOCATION, null, targetCoords, true);
-                    fieldMap.setDynamic(SpaceMap.Space.OBSTACLE, null, getObstruction(), true);
+                    fieldMap.getSpaceMap().setSpace(SpaceMap.Space.TARGET_LOCATION, targetCoords, true);
+                    fieldMap.getSpaceMap().setSpace(SpaceMap.Space.OBSTACLE, getObstruction(), true);
                     Visuals.fieldMapToImage(fieldMap, "A_obstruction_pre");
 
                     long startTime = System.nanoTime();
@@ -149,7 +153,7 @@ public class PathfindingOpMode extends OpMode {
             if (location != null) {
                 int[] targetCoords = new int[] {75, 75};
                 fieldMap.setRobotPosition(location);
-                fieldMap.setDynamic(SpaceMap.Space.TARGET_LOCATION, null, targetCoords, true);
+                fieldMap.getSpaceMap().setSpace(SpaceMap.Space.TARGET_LOCATION,  targetCoords, true);
 
 
                 SpaceMap pathSpaceMap;
@@ -168,7 +172,7 @@ public class PathfindingOpMode extends OpMode {
                     Log.d(TAG, String.format("D* Lite move planned in %s ms", duration));
                 } else {
 
-                    fieldMap.setDynamic(SpaceMap.Space.OBSTACLE, null, getObstruction(), true);
+                    fieldMap.getSpaceMap().setSpace(SpaceMap.Space.OBSTACLE, getObstruction(), true);
 
                     Visuals.fieldMapToImage(fieldMap, "D_complete_pre");
                     long startTime = System.nanoTime();

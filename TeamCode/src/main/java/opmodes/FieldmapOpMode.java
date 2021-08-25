@@ -12,12 +12,13 @@ import org.firstinspires.ftc.teamcode.GamepadController.ButtonState;
 import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.HashMap;
 
 import pathfinding.FieldMap;
 import pathfinding.SpaceMap;
-import pathfinding.Visuals;
 import pathfinding.VuforiaManager;
+import pixel_distances.FocalDistances;
+import pixel_distances.PixelDistances;
 import tf_detection.Detection;
 import tf_detection.TFManager;
 
@@ -28,12 +29,14 @@ public class FieldmapOpMode extends OpMode {
     private static final String TAG = "vuf.test.tfOpMode";
     private GamepadController movementController;
     private GamepadController mechanismController;
+    private static final long nanoToMilli = 1000000;
 
     private VuforiaManager vuforiaManager;
     private FieldMap fieldMap;
+    private PixelDistances pixelDistances;
     private final double inchesToMM = 25.4;
     private final double toCameraCenter = 1.25; // inches from bottom of logitech c615 to actual camera
-    private final double cameraPlatform = 10.5;
+    private final double cameraPlatform = 16; // inches
     private final double cameraHeight = (cameraPlatform + toCameraCenter) * inchesToMM;
 
     private static final int fieldLength = 3660;
@@ -43,13 +46,13 @@ public class FieldmapOpMode extends OpMode {
     public void init() {
         movementController = new GamepadController(gamepad1);
         vuforiaManager = new VuforiaManager(hardwareMap, fieldLength, false);
-        TFManager tfManager = new TFManager(hardwareMap, cameraHeight, vuforiaManager,
+        TFManager tfManager = new TFManager(hardwareMap, vuforiaManager,
                 TFManager.DetectorType.FTC_TFOD, true);
 
-        Hashtable<SpaceMap.Space, ArrayList<OpenGLMatrix>> staticCoordsGL = new Hashtable<>();
+        HashMap<SpaceMap.Space, ArrayList<OpenGLMatrix>> staticCoordsGL = new HashMap<>();
         staticCoordsGL.put(SpaceMap.Space.IMAGE_TARGET, vuforiaManager.getLocTrackablesAsMatrices());
-
-        fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager, true);
+        pixelDistances = new FocalDistances(cameraHeight, vuforiaManager.getCameraCalibration());
+        fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager, pixelDistances, true);
     }
 
     @Override
@@ -73,10 +76,13 @@ public class FieldmapOpMode extends OpMode {
     public void runControls() {
 
         movementController.updateButtonStates();
-        // update map
+//        // update map
         OpenGLMatrix location = vuforiaManager.getUpdatedRobotPosition();
         if (location != null) {
+            long startTime = System.nanoTime();
             fieldMap.update(location);
+            long duration = (System.nanoTime() - startTime)/nanoToMilli;
+            Log.i(TAG, "Finished updating map in " + duration + " ms");
             telemetry.addData("Robot position", VuforiaManager.format(location));
         }  else {
             Log.d(TAG, "no location");
@@ -89,10 +95,10 @@ public class FieldmapOpMode extends OpMode {
         if (movementController.getButtonState(ToggleButton.A) == ButtonState.KEY_DOWN) {
             location = vuforiaManager.getUpdatedRobotPosition();
             if (location != null) {
-                Log.d(TAG, "mapping recognitions");
-                fieldMap.setRobotPosition(location);
-                fieldMap.updateDynamicPositions();
-                Visuals.fieldMapToImage(fieldMap.getSpaceMap().getRawMap(), "recognitionMap");
+                long startTime = System.nanoTime();
+                fieldMap.update(location);
+                long duration = (System.nanoTime() - startTime)/nanoToMilli;
+                Log.i(TAG, "Finished updating map in " + duration + " ms");
             } else {
                 Log.d(TAG, "no location");
             }
@@ -106,6 +112,10 @@ public class FieldmapOpMode extends OpMode {
                 fieldMap.setRobotPosition(location);
                 fieldMap.checkDisappearances();
             }
+        }
+
+        if (movementController.getButtonState(ToggleButton.DPAD_UP) == ButtonState.KEY_DOWN) {
+            fieldMap.getSpaceMap().catalog();
         }
 
         if (movementController.getButtonState(ToggleButton.X) == ButtonState.KEY_DOWN) {

@@ -172,16 +172,16 @@ public class DLite {
         SpaceMap newMap = new SpaceMap(spaceMap);
         for (DLiteNode node : path) {
             int[] mxCoords = node.getMatrixCoords();
-            newMap.setSpace(mxCoords, SpaceMap.Space.PF_PATH);
+            newMap.setSpace(SpaceMap.Space.PF_PATH, mxCoords, false);
         }
 
         DLiteNode first = path.get(0);
         int[] firstCoords = first.getMatrixCoords();
-        newMap.setSpace(firstCoords, SpaceMap.Space.PF_START);
+        newMap.setSpace(SpaceMap.Space.PF_START, firstCoords, false);
 
         DLiteNode last = path.get(path.size()-1);
         int[] lastCoords = last.getMatrixCoords();
-        newMap.setSpace(lastCoords, SpaceMap.Space.PF_END);
+        newMap.setSpace(SpaceMap.Space.PF_END, lastCoords, false);
 
         return newMap;
     }

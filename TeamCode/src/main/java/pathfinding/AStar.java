@@ -123,16 +123,16 @@ public class AStar {
 
         for (AStarNode node : path) {
             int[] mxCoords = node.getMatrixCoords();
-            newSpaceMap.setSpace(mxCoords, SpaceMap.Space.PF_PATH);
+            newSpaceMap.setSpace(SpaceMap.Space.PF_PATH, mxCoords, false);
         }
 
         AStarNode first = path.get(0);
         int[] firstCoords = first.getMatrixCoords();
-        newSpaceMap.setSpace(firstCoords, SpaceMap.Space.PF_START);
+        newSpaceMap.setSpace(SpaceMap.Space.PF_START, firstCoords, false);
 
         AStarNode last = path.get(path.size()-1);
         int[] lastCoords = last.getMatrixCoords();
-        newSpaceMap.setSpace(lastCoords, SpaceMap.Space.PF_END);
+        newSpaceMap.setSpace(SpaceMap.Space.PF_END, lastCoords, false);
 
         return newSpaceMap;
     }
