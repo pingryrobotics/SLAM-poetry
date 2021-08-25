@@ -1,12 +1,17 @@
 package pathfinding;
 
 import android.graphics.Color;
+import android.util.Log;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 
+import org.firstinspires.ftc.robotcore.external.function.Consumer;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 
 import annotations.AnyCoordinateRange;
 import annotations.MatrixCoordinates;
@@ -18,12 +23,20 @@ import annotations.MatrixCoordinates;
  * simpler, faster, and more consistent.
  */
 public class SpaceMap {
-
+    private static final String TAG = "vuf.test.spacemap";
     private final Space[][] spaceMap;
     public final int height;
     public final int width;
     private final int minRange;
     private final int maxRange;
+
+    /**
+     * Coordinate map keeps track of all the different types of coordinates and their
+     * locations on the field to improve performance when removing sets of spaces
+     *
+     * Clear spaces are not recorded in the coordinate map
+     */
+    private final HashMap<Space, ArrayList<int[]>> coordMap = new HashMap<>();
 
     /**
      * Create new spacemap with specified width and height and fill it with clear spots
@@ -77,28 +90,6 @@ public class SpaceMap {
     }
 
 
-    /**
-     * Fill a row of the spacemap with a space
-     * @param row the row to fill
-     * @param space the space to fill with
-     */
-    public void fillRow(int row, @NonNull Space space) {
-        if (row >= 0 && row < height) // make sure its in bounds
-            Arrays.fill(spaceMap[row], space);
-    }
-
-    /**
-     * Fill a column of the spacemap with a space
-     * @param column the column to fill
-     * @param space the space to fill with
-     */
-    public void fillColumn(int column, @NonNull Space space) {
-        if (column >= 0 && column < width) { // make sure its in bounds
-            for(Space[] row : spaceMap) {
-                row[column] = space;
-            }
-        }
-    }
 
     @NonNull
     public Space[][] getRawMap() { return spaceMap; }
@@ -108,7 +99,7 @@ public class SpaceMap {
      * Compares local spacemap to new spacemap
      * @param otherMap The other spacemap to compare to
      * @param requireStateChange if true, only spaces where the passable status is changed are included
-     * @return an arraylist of all different coordiantes
+     * @return an arraylist of all different coordinates
      */
     @NonNull
     @MatrixCoordinates
@@ -131,28 +122,6 @@ public class SpaceMap {
         return diffList;
     }
 
-    /**
-     * Set a coordinate to a space
-     * @param coords the coordinates to replace
-     * @param newSpace the new space to set
-     * @return the value previously at that space
-     */
-    @NonNull
-    public Space setSpace(@NonNull @MatrixCoordinates int[] coords, @NonNull Space newSpace) {
-        Space oldSpace = getSpace(coords);
-        spaceMap[coords[0]][coords[1]] = newSpace;
-        return oldSpace;
-    }
-
-    /**
-     * Get the space at a coordinate
-     * @param coords the coordinate of the space to get, in matrix coordinates
-     * @return the space at the coordiante
-     */
-    @NonNull
-    public SpaceMap.Space getSpace(@NonNull @MatrixCoordinates int[] coords) {
-        return spaceMap[coords[0]][coords[1]];
-    }
 
     /**
      * Gets a deep copy of the space array
@@ -198,12 +167,268 @@ public class SpaceMap {
         return newCoords;
     }
 
+    /**
+     * Apply a function to every element of the space map
+     * @param allocateNew if true, a new array will be allocated for each coordinate pair per loop,
+     *                    so the array can be saved in lists etc. Otherwise, one array will be
+     *                    changed to reflect the new coordinates each loop. Only set to true if
+     *                    the coordinate array needs to be maintained after use.
+     * @param consumer the consumer to apply. the consumer takes in an array of coordinates in
+     *                 the form {row, column}
+     */
+    private void applyToSpaceMap(boolean allocateNew, Consumer<int[]> consumer) {
+        int[] coords = new int[2]; // create so we dont have to reallocate
+        for (int r = 0; r < spaceMap.length; r++) {
+            for (int c = 0; c < spaceMap[0].length; c++) {
+                coords[0] = r;
+                coords[1] = c;
+                consumer.accept(coords);
+            }
+        }
+    }
+
+
+    /**
+     * Function for testing how long looping through the whole map takes
+     * it took about 4 ms when I ran it, so not really worried about time there
+     */
+    public void catalog() {
+        long startTime = System.nanoTime();
+        HashMap<Space, ArrayList<int[]>> hashMap = new HashMap<>();
+        for (int r = 0; r < spaceMap.length; r++) {
+            for (int c = 0; c < spaceMap[0].length; c++) {
+                Space space = spaceMap[r][c];
+                if (!space.equals(Space.CLEAR)) {
+                    hashMap.putIfAbsent(space, new ArrayList<>());
+                    hashMap.get(space).add(new int[]{r, c});
+                }
+            }
+        }
+
+        long duration = (System.nanoTime() - startTime)/CoordinateUtils.nanoToMilli;
+        Log.d(TAG, "Finished cataloging in " + duration + " ms");
+    }
+
+    // region adding/removing
+
+
+    /**
+     * Sets the border of the spacemap to walls
+     */
+    public void setWalls() {
+        // set top and bottom row
+        Arrays.fill(spaceMap[0], Space.WALL);
+        Arrays.fill(spaceMap[height-1], Space.WALL);
+        // set left and right column
+        for(Space[] row : spaceMap) {
+            row[0] = Space.WALL;
+            row[width-1] = Space.WALL;
+        }
+    }
+
+
+    /**
+     * Set a coordinate to a space
+     * @param newSpace the new space to set
+     * @param coords the coordinates to replace
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     */
+    public void setSpace(@NonNull Space newSpace, @NonNull @MatrixCoordinates int[] coords, boolean allowStatic) {
+        Space oldSpace = getSpace(coords);
+        if (!(newSpace.isStatic() || oldSpace.isStatic()) || allowStatic) {
+            spaceMap[coords[0]][coords[1]] = newSpace;
+        }
+    }
+
+    /**
+     * Set a coordinate to a space
+     * @param newSpace the new space to set
+     * @param coords the coordinates to replace
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     */
+    public void setSpace(Space newSpace, @NonNull @MatrixCoordinates ArrayList<int[]> coords, boolean allowStatic) {
+        // if the space is static and editing statics isnt allowed, exit
+        if (newSpace.isStatic() && !allowStatic) {
+            return;
+        }
+        for (int[] xyPair : coords) {
+            setSpace(newSpace, xyPair, false);
+        }
+    }
+
+    /**
+     * Set a list of coordinates to spaces
+     * @param coordMap a hashmap of spaces and coordinates to set
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     */
+    public void setSpace(@NonNull @MatrixCoordinates HashMap<Space, ArrayList<int[]>> coordMap, boolean allowStatic) {
+        for (Space space : coordMap.keySet()) {
+            // if its static and editing statics isnt allowed, pass
+            if (space.isStatic() && !allowStatic)
+                continue;
+
+            ArrayList<int[]> coords = coordMap.get(space);
+            if (coords != null)
+                setSpace(space, coords, allowStatic);
+        }
+    }
+
+    /**
+     * Add a coordinate to a space, but only if the overridden space is clear
+     * @param newSpace the new space to add
+     * @param coords the coordinates to add
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     */
+    public void addSpace(@NonNull Space newSpace,
+                         @NonNull @MatrixCoordinates int[] coords,
+                         boolean allowStatic) {
+        if (getSpace(coords).equals(Space.CLEAR)) {
+            setSpace(newSpace, coords, allowStatic);
+        }
+    }
+
+    /**
+     * Add a list of coordinate to a space, but only if the overridden space is clear
+     * @param newSpace the new space to add
+     * @param coords the coordinates to add
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     */
+    public void addSpace(Space newSpace,
+                         @NonNull @MatrixCoordinates ArrayList<int[]> coords,
+                         boolean allowStatic) {
+        for (int[] xyPair : coords) {
+            addSpace(newSpace, coords, allowStatic);
+        }
+    }
+
+    /**
+     * Add a map of coordinate to spaces, but only if the overridden space is clear
+     * @param coordMap the map coordinates to add
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     */
+    public void addSpace(@NonNull @MatrixCoordinates HashMap<Space, ArrayList<int[]>> coordMap, boolean allowStatic) {
+        for (Space space : coordMap.keySet()) {
+            ArrayList<int[]> coords = coordMap.get(space);
+            if (coords != null)
+                addSpace(space, coords, allowStatic);
+        }
+    }
+
+    /**
+     * Clears a list of coordinates from the spacemap by setting it to clear
+     * @param coordsList the list of coordinates to clear
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     */
+    public void clearSpace(@NonNull @MatrixCoordinates ArrayList<int[]> coordsList,
+                           boolean allowStatic) {
+        setSpace(Space.CLEAR, coordsList, allowStatic);
+    }
+
+    /**
+     * Clears all coordinates from the spacemap by setting them to clear
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     *                    If this is true, only non static spaces will be removed
+     */
+    public void clearSpace(boolean allowStatic) {
+        // loop through all coords
+        applyToSpaceMap(false, new Consumer<int[]>() {
+            @Override
+            public void accept(int[] value) {
+                Space oldSpace = getSpace(value);
+                // if editing statics is allowed or it isnt static, set to clear
+                if (!oldSpace.isStatic() || allowStatic) {
+                    setSpace(Space.CLEAR, value, allowStatic);
+                }
+            }
+        });
+    }
+
+
+    /**
+     * Clears all coordinates of a specified space from the spacemap by setting them to clear
+     * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
+     *                    remove existing static spaces or add new ones will be ignored.
+     *                    If this is true, only non static spaces will be removed
+     */
+    public void clearSpace(Space space, boolean allowStatic) {
+        // if the target space is static and editing statics isnt allowed, pass
+        if (space.isStatic() && !allowStatic)
+            return;
+
+        applyToSpaceMap(false, new Consumer<int[]>() {
+            @Override
+            public void accept(int[] value) {
+                Space oldSpace = getSpace(value);
+                // if the old space is the target space, set it to clear
+                if (oldSpace.equals(space)) {
+                    setSpace(Space.CLEAR, value, allowStatic);
+                }
+            }
+        });
+    }
+
+
+    /**
+     * Gets all coordinates with the provided space from the spacemap
+     * @param space the space to get all coordinates for
+     * @return a list of all coordinates with the provided space
+     */
+    public List<int[]> getSpace(Space space) {
+        ArrayList<int[]> coordsList = new ArrayList<>();
+        applyToSpaceMap(true, new Consumer<int[]>() {
+            @Override
+            public void accept(int[] value) {
+                if (getSpace(value).equals(space)) {
+                    coordsList.add(value);
+                }
+            }
+        });
+        return coordsList;
+    }
+
+
+
+    /**
+     * Get the space at a coordinate
+     * @param coords the coordinate of the space to get, in matrix coordinates
+     * @return the space at the coordiante
+     */
+    @NonNull
+    public SpaceMap.Space getSpace(@NonNull @MatrixCoordinates int[] coords) {
+        return spaceMap[coords[0]][coords[1]];
+    }
+
+
+
+
+
+    // endregion adding/removing
+
 
     /**
      * Spaces are types which represent each type of object on the map
      * Each space has a color which is only important for visualization
      * In pathfinding, the robot can move through certain spaces, but has to navigate around others
      * i.e it has to move around obstacles (obviously)
+     *
+     * Static filled spaces are completely static spots on the field that do not change for
+     * any reason. Examples include walls, image targets, stationary game objects, etc
+     * Static fills cannot be removed or overridden by any function after being placed
+     * However, during placement, coordinates with conflicts may be overridden
+     * Static fills should only be added ONCE, during initialization
+     *
+     * Dynamic filled spaces are spaces filled with spots such as the robot, a temporary obstacle,
+     * or any other value that is subject to change.
+     * Dynamic coordinates can be added, removed, and overridden at any time
+     *
      */
     public enum Space {
 
