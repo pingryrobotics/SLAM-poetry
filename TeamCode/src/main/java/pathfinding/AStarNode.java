@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 
 import annotations.MatrixCoordinates;
+import localization.SpaceMap;
 
 /**
  * A node in the A* pathfinding algorithm

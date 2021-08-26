@@ -14,11 +14,14 @@ import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Class for using the object detector and tracker provided by FIRST
+ */
 public class FTC_Detector implements CustomDetector {
 
     private static final String TAG = "vuf.test.ftc_det";
-    private static final int imageHeight = 720;
-    private static final int imageWidth = 1280;
+    private final int imageHeight;
+    private final int imageWidth;
     private final float minResultConfidence;
     private final VuforiaLocalizer vuforia;
     private final ModelConfig modelConfig;
@@ -38,6 +41,8 @@ public class FTC_Detector implements CustomDetector {
         this.displayId = displayId;
         this.vuforia = vuforia;
         this.modelConfig = modelConfig;
+        this.imageHeight = vuforia.getCameraCalibration().getSize().getHeight();
+        this.imageWidth = vuforia.getCameraCalibration().getSize().getWidth();
     }
 
     /**
@@ -62,7 +67,7 @@ public class FTC_Detector implements CustomDetector {
     @NonNull
     private List<Detection> convertToDetection(@NonNull List<Recognition> recognitionList) {
 
-        ArrayList<Detection> detectionList = new ArrayList<>();
+        List<Detection> detectionList = new ArrayList<>();
         for (Recognition recognition : recognitionList) {
             RectF rectf = new RectF(recognition.getLeft(), recognition.getTop(),
                     recognition.getRight(), recognition.getBottom());
@@ -139,7 +144,7 @@ public class FTC_Detector implements CustomDetector {
     /**
      * Enum of ftc model assets, mostly previous years, to use with tfod
      */
-    enum ModelConfig {
+    public enum ModelConfig {
         ULTIMATE_GOAL("UltimateGoal.tflite", "Quad", "Single"),
         SKYSTONE("Skystone.tflite", "Stone", "Skystone"),
         ROVER_RUCKUS("RoverRuckus.tflite", "Gold Mineral", "Silver Mineral");

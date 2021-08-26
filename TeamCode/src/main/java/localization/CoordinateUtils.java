@@ -1,4 +1,4 @@
-package pathfinding;
+package localization;
 
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -16,6 +16,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import annotations.AnyCoordinateRange;
@@ -41,7 +42,7 @@ public class CoordinateUtils {
      */
     @NonNull
     @FieldCoordinates
-    protected static HashMap<SpaceMap.Space, ArrayList<int[]>> joinCoordinateHashtables(
+    protected static Map<SpaceMap.Space, ArrayList<int[]>> joinCoordinateHashtables(
             @Nullable @FieldCoordinates HashMap<SpaceMap.Space, ArrayList<int[]>> coordsInt,
             @Nullable @FieldCoordinates HashMap<SpaceMap.Space, ArrayList<OpenGLMatrix>> coordsGL) {
 

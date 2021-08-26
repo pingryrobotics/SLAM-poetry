@@ -17,7 +17,8 @@ import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
 import java.util.ArrayList;
 import java.util.List;
 
-import pathfinding.Visuals;
+import display.DisplaySource;
+import display.Visuals;
 
 /**
  * Class for object detection with Google's ML Kit

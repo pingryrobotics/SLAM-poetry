@@ -1,4 +1,4 @@
-package pathfinding;
+package localization;
 
 import android.util.Log;
 
@@ -16,7 +16,7 @@ import annotations.MatrixCoordinates;
  * A class for managing recognitions that are mapped out on the fieldmap
  */
 public class MappedRecognition {
-    private static final String TAG = "vuf.test.mappedrec";
+    private static final String TAG = "vuf.test.mapped_rec";
     private static final int proximityRange = FieldMap.getScale();
     private OpenGLMatrix fieldPosition;
     private int[] matrixPosition;
@@ -44,7 +44,7 @@ public class MappedRecognition {
      * @param otherRecognition the other recognition to check
      * @return true if the recognition was updated, otherwise false
      */
-    public boolean updateIfConflict(MappedRecognition otherRecognition) {
+    public boolean updateIfConflict(@NonNull MappedRecognition otherRecognition) {
 
         if (withinProximityRange(otherRecognition.fieldPosition)) {
             // if they have the same space, update
@@ -64,7 +64,7 @@ public class MappedRecognition {
      * Copies the position and space of another mapped recognition this recognition
      * @param otherRecognition the recognition to copy data from
      */
-    private void copyRecognition(MappedRecognition otherRecognition) {
+    private void copyRecognition(@NonNull MappedRecognition otherRecognition) {
         fieldPosition = otherRecognition.getFieldPosition();
         matrixPosition = otherRecognition.getMatrixPosition();
         space = otherRecognition.getSpace();
@@ -93,7 +93,7 @@ public class MappedRecognition {
      * @param otherRecognition the other recognition to check
      * @return true if they do, otherwise false
      */
-    public boolean sameMatrixPosition(MappedRecognition otherRecognition) {
+    public boolean sameMatrixPosition(@NonNull MappedRecognition otherRecognition) {
         return Arrays.equals(otherRecognition.matrixPosition, matrixPosition);
     }
 

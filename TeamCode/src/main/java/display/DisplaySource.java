@@ -1,4 +1,4 @@
-package tf_detection;
+package display;
 
 import static android.view.View.VISIBLE;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
@@ -23,6 +23,13 @@ public class DisplaySource {
     private final static String TAG = "vuf.test.displaysource";
     private final boolean activeDisplay;
 
+    /**
+     * Initialize the display source with a display id
+     * the display id, also called the monitorViewIdParent, is the id of the
+     * space on screen where the display will be shown. Look at the ftc samples
+     * for examples on the display ids
+     * @param displayId the display id
+     */
     public DisplaySource(int displayId) {
         Log.d(TAG, "display id " + displayId);
         if (displayId != 0) {

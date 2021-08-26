@@ -1,4 +1,4 @@
-package frame_source;
+package display;
 
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;

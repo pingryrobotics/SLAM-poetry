@@ -14,9 +14,9 @@ import org.firstinspires.ftc.robotcore.external.function.Consumer;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import pathfinding.CoordinateUtils;
-import pathfinding.Visuals;
-import pathfinding.VuforiaManager;
+import localization.CoordinateUtils;
+import display.Visuals;
+import localization.VuforiaManager;
 
 
 // sourced from https://github.com/FIRST-Tech-Challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptTensorFlowObjectDetection.java

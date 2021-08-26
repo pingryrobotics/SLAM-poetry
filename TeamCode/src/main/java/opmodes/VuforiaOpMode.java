@@ -13,7 +13,7 @@ import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 
 import java.util.Hashtable;
 
-import pathfinding.VuforiaManager;
+import localization.VuforiaManager;
 
 
 @TeleOp(name="Vuforia: Vuforia OpMode", group="Testing")
@@ -25,7 +25,7 @@ public class VuforiaOpMode extends OpMode {
     private VuforiaManager vuforiaManager;
     private int mmFieldLength = 301;
 
-    private Hashtable<VuforiaManager.LocalizationTrackable, Telemetry.Item> trackableLogs;
+    private Hashtable<VuforiaManager.ImageTarget, Telemetry.Item> trackableLogs;
 
 
 
@@ -45,7 +45,7 @@ public class VuforiaOpMode extends OpMode {
     @Override
     public void start() {
 
-        for (VuforiaManager.LocalizationTrackable trackable : VuforiaManager.LocalizationTrackable.cachedValues()) {
+        for (VuforiaManager.ImageTarget trackable : VuforiaManager.ImageTarget.cachedValues()) {
             trackableLogs.put(trackable, telemetry.addData(trackable.name(), ""));
         }
 
@@ -70,7 +70,7 @@ public class VuforiaOpMode extends OpMode {
 
 
 
-        for (VuforiaManager.LocalizationTrackable key : VuforiaManager.LocalizationTrackable.cachedValues()) {
+        for (VuforiaManager.ImageTarget key : VuforiaManager.ImageTarget.cachedValues()) {
             trackableLogs.get(key)
                     .setValue(vuforiaManager.isTrackableVisible(key) ? "Visible" : "Not Visible");
         }

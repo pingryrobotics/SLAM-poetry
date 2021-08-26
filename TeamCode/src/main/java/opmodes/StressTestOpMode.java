@@ -13,7 +13,7 @@ import java.util.List;
 
 import tf_detection.Detection;
 import tf_detection.TFManager;
-import pathfinding.VuforiaManager;
+import localization.VuforiaManager;
 
 
 @TeleOp(name="TF: Task Lib OpMode", group="Testing")

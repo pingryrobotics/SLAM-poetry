@@ -13,7 +13,7 @@ import java.util.List;
 
 import tf_detection.Detection;
 import tf_detection.TFManager;
-import pathfinding.VuforiaManager;
+import localization.VuforiaManager;
 
 
 @TeleOp(name="TF: MLKit OpMode", group="Testing")
@@ -102,7 +102,7 @@ public class MLKitOpMode extends OpMode {
             }
         }
 
-        for (VuforiaManager.LocalizationTrackable key : VuforiaManager.LocalizationTrackable.cachedValues()) {
+        for (VuforiaManager.ImageTarget key : VuforiaManager.ImageTarget.cachedValues()) {
             telemetry.addData(key.name(),
                     vuforiaManager.isTrackableVisible(key) ? "Visible" : "Not Visible");
         }

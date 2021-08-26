@@ -14,9 +14,9 @@ import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import pathfinding.FieldMap;
-import pathfinding.SpaceMap;
-import pathfinding.VuforiaManager;
+import localization.FieldMap;
+import localization.SpaceMap;
+import localization.VuforiaManager;
 import pixel_distances.FocalDistances;
 import pixel_distances.PixelDistances;
 import tf_detection.Detection;
@@ -50,7 +50,7 @@ public class FieldmapOpMode extends OpMode {
                 TFManager.DetectorType.FTC_TFOD, true);
 
         HashMap<SpaceMap.Space, ArrayList<OpenGLMatrix>> staticCoordsGL = new HashMap<>();
-        staticCoordsGL.put(SpaceMap.Space.IMAGE_TARGET, vuforiaManager.getLocTrackablesAsMatrices());
+        staticCoordsGL.put(SpaceMap.Space.IMAGE_TARGET, vuforiaManager.getTrackablePositions());
         pixelDistances = new FocalDistances(cameraHeight, vuforiaManager.getCameraCalibration());
         fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager, pixelDistances, true);
     }
@@ -88,7 +88,7 @@ public class FieldmapOpMode extends OpMode {
             Log.d(TAG, "no location");
         }
         // get trackable status
-        for (VuforiaManager.LocalizationTrackable trackable : VuforiaManager.LocalizationTrackable.cachedValues()) {
+        for (VuforiaManager.ImageTarget trackable : VuforiaManager.ImageTarget.cachedValues()) {
             telemetry.addData(trackable.name(), vuforiaManager.isTrackableVisible(trackable) ? "Visible" : "Not Visible");
         }
 

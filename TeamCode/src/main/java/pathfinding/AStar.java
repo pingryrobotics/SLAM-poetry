@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 import annotations.MatrixCoordinates;
+import localization.SpaceMap;
 
 /**
  * Implementation of the A* search algorithm for ftc pathfinding

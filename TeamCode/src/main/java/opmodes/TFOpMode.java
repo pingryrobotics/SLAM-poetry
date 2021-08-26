@@ -19,8 +19,8 @@ import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 import java.util.ArrayList;
 import java.util.List;
 
-import pathfinding.Visuals;
-import pathfinding.VuforiaManager;
+import display.Visuals;
+import localization.VuforiaManager;
 import tf_detection.Detection;
 import tf_detection.TFManager;
 
@@ -106,7 +106,7 @@ public class TFOpMode extends OpMode {
             }
         }
 
-        for (VuforiaManager.LocalizationTrackable key : VuforiaManager.LocalizationTrackable.cachedValues()) {
+        for (VuforiaManager.ImageTarget key : VuforiaManager.ImageTarget.cachedValues()) {
             telemetry.addData(key.name(),
                     vuforiaManager.isTrackableVisible(key) ? "Visible" : "Not Visible");
         }

@@ -6,8 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.teamcode.GamepadController;
 import org.firstinspires.ftc.teamcode.GamepadController.ButtonState;
 import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
@@ -15,10 +13,10 @@ import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import pathfinding.FieldMap;
-import pathfinding.SpaceMap;
-import pathfinding.Visuals;
-import pathfinding.VuforiaManager;
+import display.Visuals;
+import localization.FieldMap;
+import localization.SpaceMap;
+import localization.VuforiaManager;
 import pixel_distances.FocalDistances;
 import pixel_distances.PixelDistances;
 import tf_detection.TFManager;
@@ -45,7 +43,7 @@ public class PathfindingOpMode extends OpMode {
         vuforiaManager = new VuforiaManager(hardwareMap, fieldLength, false);
 
         HashMap<SpaceMap.Space, ArrayList<OpenGLMatrix>> staticCoordsGL = new HashMap<>();
-        staticCoordsGL.put(SpaceMap.Space.IMAGE_TARGET, vuforiaManager.getLocTrackablesAsMatrices());
+        staticCoordsGL.put(SpaceMap.Space.IMAGE_TARGET, vuforiaManager.getTrackablePositions());
         TFManager tfManager = new TFManager(hardwareMap, vuforiaManager, TFManager.DetectorType.FTC_TFOD, false);
         pixelDistances = new FocalDistances(0, vuforiaManager.getCameraCalibration());
         fieldMap = new FieldMap(fieldLength, staticCoordsGL, null, tfManager, pixelDistances, false);
@@ -70,10 +68,8 @@ public class PathfindingOpMode extends OpMode {
      */
     public void runControls() {
 
-        for (VuforiaManager.LocalizationTrackable key : VuforiaManager.LocalizationTrackable.cachedValues()) {
-
-            VuforiaTrackable trackable = vuforiaManager.getLocalizationTrackable(key);
-            telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");
+        for (VuforiaManager.ImageTarget key : VuforiaManager.ImageTarget.cachedValues()) {
+            telemetry.addData(key.name(), vuforiaManager.isTrackableVisible(key) ? "Visible" : "Not Visible");
         }
 
         telemetry.addData("Last robot position: ", VuforiaManager.format(vuforiaManager.getUpdatedRobotPosition()));

@@ -22,7 +22,7 @@ import annotations.ImageCoordinates;
  * of the camera
  */
 public class FocalDistances implements PixelDistances {
-    private static final String TAG = "vuf.test.focaldist";
+    private static final String TAG = "vuf.test.focal_dist";
     public static final int toComplement = 90;
     private final CameraCalibration camCal;
     private final double cameraHeightMM;

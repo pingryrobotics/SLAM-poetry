@@ -8,6 +8,8 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+import display.DisplaySource;
+
 /**
  * Test class to test FrameManager's camera switching
  */

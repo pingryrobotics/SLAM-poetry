@@ -6,6 +6,7 @@ import androidx.annotation.Nullable;
 import java.util.Arrays;
 
 import annotations.MatrixCoordinates;
+import localization.SpaceMap;
 
 /**
  * A node in the D* Lite pathfinding algorithm

@@ -1,4 +1,4 @@
-package pathfinding;
+package display;
 
 
 import android.graphics.Bitmap;
@@ -22,6 +22,8 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Objects;
 
+import localization.FieldMap;
+import localization.SpaceMap;
 import tf_detection.Detection;
 
 public class Visuals {

@@ -11,7 +11,7 @@ import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 
 import java.util.List;
 
-import pathfinding.VuforiaManager;
+import localization.VuforiaManager;
 import pixel_distances.FocalDistances;
 import pixel_distances.PixelDistances;
 import tf_detection.Detection;
