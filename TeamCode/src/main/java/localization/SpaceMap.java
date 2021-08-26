@@ -1,4 +1,4 @@
-package pathfinding;
+package localization;
 
 import android.graphics.Color;
 import android.util.Log;
@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import annotations.AnyCoordinateRange;
 import annotations.MatrixCoordinates;
@@ -30,13 +32,6 @@ public class SpaceMap {
     private final int minRange;
     private final int maxRange;
 
-    /**
-     * Coordinate map keeps track of all the different types of coordinates and their
-     * locations on the field to improve performance when removing sets of spaces
-     *
-     * Clear spaces are not recorded in the coordinate map
-     */
-    private final HashMap<Space, ArrayList<int[]>> coordMap = new HashMap<>();
 
     /**
      * Create new spacemap with specified width and height and fill it with clear spots
@@ -111,7 +106,7 @@ public class SpaceMap {
             SpaceMap.Space[] oRow = otherMap.spaceMap[r];
             if (!Arrays.equals(cRow, oRow)) {
                 for(int c = 0; c < spaceMap[0].length; c++) {
-                    if (!cRow[c].equals(oRow[c]) && // if theyre not equal
+                    if (cRow[c] != oRow[c] && // if theyre not equal
                             // and if a state change is required, then theyre different
                             (!requireStateChange || oRow[c].passable != cRow[c].passable)) {
                         diffList.add(new int[] {r, c});
@@ -182,7 +177,8 @@ public class SpaceMap {
             for (int c = 0; c < spaceMap[0].length; c++) {
                 coords[0] = r;
                 coords[1] = c;
-                consumer.accept(coords);
+                int[] newCoords = (allocateNew) ? coords.clone() : coords;
+                consumer.accept(newCoords);
             }
         }
     }
@@ -194,18 +190,18 @@ public class SpaceMap {
      */
     public void catalog() {
         long startTime = System.nanoTime();
-        HashMap<Space, ArrayList<int[]>> hashMap = new HashMap<>();
+        Map<Space, ArrayList<int[]>> hashMap = new HashMap<>();
         for (int r = 0; r < spaceMap.length; r++) {
             for (int c = 0; c < spaceMap[0].length; c++) {
                 Space space = spaceMap[r][c];
-                if (!space.equals(Space.CLEAR)) {
+                if (space != Space.CLEAR) {
                     hashMap.putIfAbsent(space, new ArrayList<>());
-                    hashMap.get(space).add(new int[]{r, c});
+                    Objects.requireNonNull(hashMap.get(space)).add(new int[]{r, c});
                 }
             }
         }
 
-        long duration = (System.nanoTime() - startTime)/CoordinateUtils.nanoToMilli;
+        long duration = (System.nanoTime() - startTime)/ CoordinateUtils.nanoToMilli;
         Log.d(TAG, "Finished cataloging in " + duration + " ms");
     }
 
@@ -248,7 +244,7 @@ public class SpaceMap {
      * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
      *                    remove existing static spaces or add new ones will be ignored.
      */
-    public void setSpace(Space newSpace, @NonNull @MatrixCoordinates ArrayList<int[]> coords, boolean allowStatic) {
+    public void setSpace(Space newSpace, @NonNull @MatrixCoordinates List<int[]> coords, boolean allowStatic) {
         // if the space is static and editing statics isnt allowed, exit
         if (newSpace.isStatic() && !allowStatic) {
             return;
@@ -270,7 +266,7 @@ public class SpaceMap {
             if (space.isStatic() && !allowStatic)
                 continue;
 
-            ArrayList<int[]> coords = coordMap.get(space);
+            List<int[]> coords = coordMap.get(space);
             if (coords != null)
                 setSpace(space, coords, allowStatic);
         }
@@ -286,7 +282,7 @@ public class SpaceMap {
     public void addSpace(@NonNull Space newSpace,
                          @NonNull @MatrixCoordinates int[] coords,
                          boolean allowStatic) {
-        if (getSpace(coords).equals(Space.CLEAR)) {
+        if (getSpace(coords) == Space.CLEAR) {
             setSpace(newSpace, coords, allowStatic);
         }
     }
@@ -299,10 +295,10 @@ public class SpaceMap {
      *                    remove existing static spaces or add new ones will be ignored.
      */
     public void addSpace(Space newSpace,
-                         @NonNull @MatrixCoordinates ArrayList<int[]> coords,
+                         @NonNull @MatrixCoordinates List<int[]> coords,
                          boolean allowStatic) {
         for (int[] xyPair : coords) {
-            addSpace(newSpace, coords, allowStatic);
+            addSpace(newSpace, xyPair, allowStatic);
         }
     }
 
@@ -314,7 +310,7 @@ public class SpaceMap {
      */
     public void addSpace(@NonNull @MatrixCoordinates HashMap<Space, ArrayList<int[]>> coordMap, boolean allowStatic) {
         for (Space space : coordMap.keySet()) {
-            ArrayList<int[]> coords = coordMap.get(space);
+            List<int[]> coords = coordMap.get(space);
             if (coords != null)
                 addSpace(space, coords, allowStatic);
         }
@@ -326,7 +322,7 @@ public class SpaceMap {
      * @param allowStatic if true, allows adding and removing static spaces. Otherwise, attempts to
      *                    remove existing static spaces or add new ones will be ignored.
      */
-    public void clearSpace(@NonNull @MatrixCoordinates ArrayList<int[]> coordsList,
+    public void clearSpace(@NonNull @MatrixCoordinates List<int[]> coordsList,
                            boolean allowStatic) {
         setSpace(Space.CLEAR, coordsList, allowStatic);
     }
@@ -368,7 +364,7 @@ public class SpaceMap {
             public void accept(int[] value) {
                 Space oldSpace = getSpace(value);
                 // if the old space is the target space, set it to clear
-                if (oldSpace.equals(space)) {
+                if (oldSpace == space) {
                     setSpace(Space.CLEAR, value, allowStatic);
                 }
             }
@@ -382,11 +378,11 @@ public class SpaceMap {
      * @return a list of all coordinates with the provided space
      */
     public List<int[]> getSpace(Space space) {
-        ArrayList<int[]> coordsList = new ArrayList<>();
+        List<int[]> coordsList = new ArrayList<>();
         applyToSpaceMap(true, new Consumer<int[]>() {
             @Override
             public void accept(int[] value) {
-                if (getSpace(value).equals(space)) {
+                if (getSpace(value) == space) {
                     coordsList.add(value);
                 }
             }

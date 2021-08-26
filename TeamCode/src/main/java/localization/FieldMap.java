@@ -1,7 +1,7 @@
-package pathfinding;
+package localization;
 
 
-import static pathfinding.SpaceMap.Space;
+import static localization.SpaceMap.Space;
 
 import android.graphics.Bitmap;
 import android.graphics.RectF;
@@ -21,9 +21,13 @@ import java.util.Map;
 import annotations.FieldCoordinates;
 import annotations.ImageCoordinates;
 import annotations.MatrixCoordinates;
+import display.Visuals;
+import pathfinding.AStar;
+import pathfinding.AStarNode;
+import pathfinding.DLite;
 import pixel_distances.PixelDistances;
 import tf_detection.Detection;
-import tf_detection.DisplaySource;
+import display.DisplaySource;
 import tf_detection.TFManager;
 
 /**
@@ -75,7 +79,7 @@ public class FieldMap {
 
     // amount to extend reverse recognition image coordinates rects by
     // see isObjectGone
-    private static final int pxTolerance = 50;
+    private static final int pxTolerance = 10;
 
     private static final int scale = 75; // value to scale the field values down by
     public static final int bitmapDisplaySize = 300; // good size to make bitmaps on the display
@@ -244,9 +248,9 @@ public class FieldMap {
      */
     public void updateDynamicPositions() {
         checkDisappearances(); // check disappearances beforehand
-        Iterable<MappedRecognition> recognitionPositions = getRecognitionPositions();
+        List<MappedRecognition> recognitionPositions = getRecognitionPositions();
 
-        ArrayList<int[]> removedPositions = updateMappedRecognitions(recognitionPositions);
+        List<int[]> removedPositions = updateMappedRecognitions(recognitionPositions);
         spaceMap.clearSpace(removedPositions, false);
         mapMappedRecognitions();
     }
@@ -261,8 +265,8 @@ public class FieldMap {
      * @param potentialRecognitions the list of other recognitions to check
      * @return the list of removed matrix positions
      */
-    public ArrayList<int[]> updateMappedRecognitions(Iterable<MappedRecognition> potentialRecognitions) {
-        ArrayList<int[]> removedMatrixCoords = new ArrayList<>();
+    public List<int[]> updateMappedRecognitions(List<MappedRecognition> potentialRecognitions) {
+        List<int[]> removedMatrixCoords = new ArrayList<>();
         // loop through all potential recognitions and mapped recognitions
         for (MappedRecognition potentialRecognition : potentialRecognitions) {
             boolean potentialUsed = false; // whether the potential recognition was used at all
@@ -278,7 +282,7 @@ public class FieldMap {
                     potentialUsed = true;
                 }
             }
-            if (!potentialUsed) { // add it if it wasnt factored in previously
+            if (!potentialUsed) { // add it if it wasn't factored in previously
                 mappedRecognitionList.add(potentialRecognition);
                 Log.d(TAG, "Potential not used, adding");
             }
@@ -291,8 +295,8 @@ public class FieldMap {
      * @ FIXME: 8/20/21 labels are a bit hard coded
      */
     public void mapMappedRecognitions() {
-        ArrayList<int[]> goldCoords = new ArrayList<>();
-        ArrayList<int[]> silverCoords = new ArrayList<>();
+        List<int[]> goldCoords = new ArrayList<>();
+        List<int[]> silverCoords = new ArrayList<>();
         for (MappedRecognition recognition : mappedRecognitionList) {
             int[] matrixPos = recognition.getMatrixPosition();
             if (recognition.getSpace() == Space.TARGET_LOCATION) {
@@ -319,7 +323,7 @@ public class FieldMap {
             recognitionPixels.add(recognition.getRectF());
         }
 
-        ArrayList<int[]> goneList = new ArrayList<>();
+        List<int[]> goneList = new ArrayList<>();
 
         for (int i = 0; i < mappedRecognitionList.size(); i++) {
             MappedRecognition mappedRecognition = mappedRecognitionList.get(i);
@@ -344,23 +348,6 @@ public class FieldMap {
                                  @NonNull @ImageCoordinates Iterable<RectF> recognitionPixels) {
 
         float[] imageCoords = getImageCoordsFromFieldPosition(cameraPosition, fieldPosition);
-
-
-
-        /*
-            FIXME: 8/14/21 sometimes, recognitions have out of bounds coordinates, so the object
-                           image coordinates end up out of bounds get get ignored. This might be
-                           okay, since we should only be removing if we're pretty sure its not there,
-                           but this could also be a source of bugs. One option is to round all
-                           recognition coordinates so they're within range, but that might degrade
-                           positioning accuracy.
-         */
-        // FIXME: 8/24/21 the method of getting image coordinates was changed, so all returned image
-        //                coordinates arent null, so we need a new way of determining whats offscreen
-        if (imageCoords == null) {
-            Log.d(TAG, "Object is not in camera view");
-            return false;
-        }
         // make a box around the image coordinates so there's some leeway
         // if the image coordinates arent found, then theyre not in the camera's view
         float top = Math.max(imageCoords[0]-pxTolerance, 0);
@@ -368,6 +355,8 @@ public class FieldMap {
         float left = Math.max(imageCoords[1]-pxTolerance, 0);
         float right = (float) Math.min(imageCoords[1]+pxTolerance, tfManager.imageWidth);
         RectF posRect = new RectF(left, top, right, bottom);
+
+
 
 //        float posArea = posRect.width() * posRect.height();
 //        Log.d(TAG, String.format("Image coordinates {vert, horz}: {%s, %s}", imageCoords[0], imageCoords[1]));
@@ -545,11 +534,13 @@ public class FieldMap {
     /**
      * Pathfind with the A* algorithm on the current fieldmap to the specified end coords
      * @param end_field_coords the target coordinates, in field coordinates
-     * @return a spaceMap with the path plotted out
+     * @return a spaceMap with the path plotted out, or null if there's no path or no robot position
      */
     @Nullable
     public SpaceMap aStarPathfind(@NonNull @FieldCoordinates int[] end_field_coords) {
         int[] robotCoords = getRobotPosition();
+        if (robotCoords == null)
+            return null;
         Log.d(TAG, String.format("Robot coords: {%s, %s}", robotCoords[0], robotCoords[1]));
         end_field_coords = fieldToMatrix(end_field_coords, true);
         Log.d(TAG, String.format("End coords: {%s, %s}", end_field_coords[0], end_field_coords[1]));
@@ -562,11 +553,14 @@ public class FieldMap {
     /**
      * Pathfind with the D* Lite algorithm on the current fieldmap to the specified end coords
      * @param end_field_coords the target coordinates, in field coordinates
-     * @return a spaceMap with the path plotted out, or null if no path could be calculated
+     * @return a spaceMap with the path plotted out, or null if no path could be calculated or
+     * if there's no robot position
      */
     @Nullable
     public SpaceMap dLitePathfind(@NonNull @FieldCoordinates int[] end_field_coords) {
         int[] robotCoords = getRobotPosition();
+        if (robotCoords == null)
+            return null;
         Log.d(TAG, String.format("Robot coords: {%s, %s}", robotCoords[0], robotCoords[1]));
         end_field_coords = fieldToMatrix(end_field_coords, true);
         Log.d(TAG, String.format("End coords: {%s, %s}", end_field_coords[0], end_field_coords[1]));
@@ -585,11 +579,14 @@ public class FieldMap {
 
     /**
      * Update D* Lite's pathfinding with the latest spacemap
-     * @return D* Lite's updated pathfinding based on new information
+     * @return D* Lite's updated pathfinding based on new information. if there's no robot position,
+     * or there's no changes, null is returned
      */
     @Nullable
     public SpaceMap updateDLite() {
         int[] robotCoords = getRobotPosition();
+        if (robotCoords == null)
+            return null;
         spaceMap.setSpace(Space.ROBOT, robotCoords, false);
         return dLite.update(spaceMap, robotCoords);
     }
@@ -610,6 +607,7 @@ public class FieldMap {
      * @return the robot's coordinates, in matrix coords
      */
     @MatrixCoordinates
+    @Nullable
     private int[] getRobotPosition() {
         return spaceMap.getSpace(Space.ROBOT).get(0);
     }

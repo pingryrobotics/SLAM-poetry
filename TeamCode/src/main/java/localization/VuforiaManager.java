@@ -1,4 +1,4 @@
-package pathfinding;
+package localization;
 
 import android.graphics.Bitmap;
 import android.util.Log;
@@ -16,7 +16,6 @@ import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.function.Consumer;
 import org.firstinspires.ftc.robotcore.external.function.Continuation;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraName;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.SwitchableCamera;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
@@ -27,18 +26,18 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 import org.firstinspires.ftc.robotcore.internal.camera.calibration.CameraCalibration;
-import org.jetbrains.annotations.TestOnly;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
-import frame_source.CameraInstance;
-import frame_source.FrameManager;
+import display.CameraInstance;
+import display.Visuals;
 
 
 /**
@@ -56,20 +55,16 @@ import frame_source.FrameManager;
  */
 public class VuforiaManager {
     public static final String TAG = "vuf.test.vufObj";
+    private static final String vuforiaLicenseKey = "AVnPa5X/////AAABmUhfO30V7UvEiFRLKEAy25cwZ/uQDK2M0Z8GllUIhUOhFey2tkv1iKXqY4JdAjTHq4vlEUqn4F9sgeh+1ZiBsoPbGnSCdRnnHyQKmIU1hRoCyh24OvMfaG+6JQnpWlHorMoGWAqcEGt1+GXI9x3v2GLwooT1Dv/biDVn2DKar6tKms7EEEwIWkMN5YVaiQo53rbSSajpWuEROYYIrUrgzmgyorf4ngUWmjPrWHPES0OkUW6YVrZXoGT3Rwkiyl0Y7j5Rc5qT7iFBmI4v6E9udfPpnIsYrGzlhcL7GqHBntY8TuMYMTNIcklCO+ATWT4guojTwEOaNK+bVHG3XXxJsodhBK+Tbf7QX262rIbWvQto";
 
     private VuforiaLocalizer vuforiaLocalizer;
     private OpenGLMatrix lastLocation = null;
     private final HardwareMap hardwareMap;
     private final VuforiaLocalizer.CameraDirection cameraDirection;
-    private final FrameManager frameManager;
-    private List<CameraInstance> availableCameras;
-
-    private static final String vuforiaLicenseKey = "AVnPa5X/////AAABmUhfO30V7UvEiFRLKEAy25cwZ/uQDK2M0Z8GllUIhUOhFey2tkv1iKXqY4JdAjTHq4vlEUqn4F9sgeh+1ZiBsoPbGnSCdRnnHyQKmIU1hRoCyh24OvMfaG+6JQnpWlHorMoGWAqcEGt1+GXI9x3v2GLwooT1Dv/biDVn2DKar6tKms7EEEwIWkMN5YVaiQo53rbSSajpWuEROYYIrUrgzmgyorf4ngUWmjPrWHPES0OkUW6YVrZXoGT3Rwkiyl0Y7j5Rc5qT7iFBmI4v6E9udfPpnIsYrGzlhcL7GqHBntY8TuMYMTNIcklCO+ATWT4guojTwEOaNK+bVHG3XXxJsodhBK+Tbf7QX262rIbWvQto";
 
     private OpenGLMatrix phoneLocationOnRobot;
 
-    private Hashtable<LocalizationTrackable, VuforiaTrackable> localizationTrackablesList;
-    private Hashtable<LocalizationTrackable, VuforiaTrackableDefaultListener> listenersList;
+    private HashMap<ImageTarget, TrackableInfo> infoMap;
 
     // robot measurements that need to get changed yearly
     private static final float inchesBotWidth = 18; // width of robot in inches. SET MANUALLY
@@ -78,15 +73,11 @@ public class VuforiaManager {
     private static final float mmPerInch        = 25.4f; // constant for mm to inches
     private static final float mmBotWidth       = inchesBotWidth * mmPerInch; // width of robot to mm
 
-    private static final float mmFTCFieldWidth  = (12*12 - 2) * mmPerInch; // width of field in mm. SET MANUALLY
-    // ^ idk whats happening with this calculation
-
     // 0,0 is a coordinate, keep that in mind for testing calculations
     private float mmFieldLength;
 
-    private SwitchableCamera switchableCamera;
 
-    /* BEGIN INITIALIZATIION */
+    // region initialization
 
     /**
      * Initialize the vuforia localizer, trackable locations, and everything else
@@ -97,7 +88,7 @@ public class VuforiaManager {
         this(hardwareMap, useDisplay);
         this.mmFieldLength = mmFieldLength;
         setPhoneLocation();
-        initializeLocalizationTrackables();
+        initializeImageTargets();
 
     }
 
@@ -116,7 +107,6 @@ public class VuforiaManager {
      */
     public VuforiaManager(HardwareMap hardwareMap, boolean useDisplay) {
         this.hardwareMap = hardwareMap;
-        frameManager = new FrameManager(hardwareMap);
         cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
         initializeVuforia(useDisplay);
     }
@@ -145,29 +135,8 @@ public class VuforiaManager {
             parameters.cameraName = cameraNames.get(0);
             Log.d(TAG, "Adding camera to vuforia");
         }
-        // get switchable camera and initialize vuforia
-        // see FrameManager for cameraInfo on this
-//        availableCameras = frameManager.requestSwitchableCamera(new Function<SwitchableCameraName, VuforiaLocalizer>() {
-//            @Override
-//            public VuforiaLocalizer apply(SwitchableCameraName arg) {
-//                parameters.cameraName = arg;
-//                vuforiaLocalizer = ClassFactory.getInstance().createVuforia(parameters);
-//                return vuforiaLocalizer;
-//            }
-//        });
-        // switchable cameras if we want to do that
-//        CameraName[] cameraNames = CameraInstance.getAvailableCameraNames()
-//                .toArray(new CameraName[0]);
-//        Log.d(TAG, "num of camera names: " + cameraNames.length);
-//        parameters.cameraName = ClassFactory.getInstance().getCameraManager()
-//                .nameForSwitchableCamera(cameraNames);
 
         vuforiaLocalizer = ClassFactory.getInstance().createVuforia(parameters);
-//        switchableCamera = (SwitchableCamera) vuforiaLocalizer.getCamera();
-
-
-        // instantiate the vuforia localizer
-
         // enable capturing frames from vuforia
         vuforiaLocalizer.enableConvertFrameToBitmap();
     }
@@ -180,41 +149,38 @@ public class VuforiaManager {
      *
      * Currently, this is just using the defaults from the source
      */
-    private void initializeLocalizationTrackables() {
-        localizationTrackablesList = new Hashtable<>();
-        listenersList = new Hashtable<>();
+    private void initializeImageTargets() {
+        infoMap = new HashMap<>();
 
         // custom datasets also use this, but you load a different thing obviously
-        VuforiaTrackables localizationTrackables = vuforiaLocalizer.loadTrackablesFromAsset("UltimateGoal");
+        VuforiaTrackables vuforiaTrackables = vuforiaLocalizer.loadTrackablesFromAsset("UltimateGoal");
 
         // give basic information for each trackable
-        List<LocalizationTrackable> trackableLabels = LocalizationTrackable.cachedValues();
-        for (int i = 0; i < localizationTrackables.size(); i++) {
+        List<ImageTarget> trackableLabels = ImageTarget.cachedValues();
+        for (int i = 0; i < vuforiaTrackables.size(); i++) {
             // get each trackable's label from the LocalizationTrackable enum
-            LocalizationTrackable label = trackableLabels.get(i);
+            ImageTarget imageTarget = trackableLabels.get(i);
             // get the corresponding target
-            VuforiaTrackable target = localizationTrackables.get(i);
-            // put it into the hashtable
-            localizationTrackablesList.put(label, target);
+            VuforiaTrackable target = vuforiaTrackables.get(i);
             // set the name to the label from the enum
-            target.setName(label.name());
-            RobotLog.ii(TAG, "Target=%s", "target " + label.name() + " placed");
+            target.setName(imageTarget.name());
+            RobotLog.ii(TAG, "Target=%s", "target " + imageTarget.name() + " placed");
+            TrackableInfo trackableInfo = new TrackableInfo(target, imageTarget);
+            infoMap.put(imageTarget, trackableInfo);
             // let the listener know where the phone is
-            VuforiaTrackableDefaultListener listener = ((VuforiaTrackableDefaultListener)target.getListener());
-            listenersList.put(label, listener);
-
-            listener.setPhoneInformation(phoneLocationOnRobot, cameraDirection);
+            trackableInfo.getListener().setPhoneInformation(phoneLocationOnRobot, cameraDirection);
 
         }
 
         initializeTrackableMatrices();
 
-        localizationTrackables.activate();
+        vuforiaTrackables.activate();
     }
 
     /**
      * Set an OpenGLMatrix for each localization trackable
      */
+    @SuppressWarnings("MagicNumber")
     private void initializeTrackableMatrices() {
 
         // set the location of target 1
@@ -222,7 +188,7 @@ public class VuforiaManager {
         int halfFieldLength = (int)mmFieldLength/2;
         int quadFieldLength = halfFieldLength/2;
 
-        VuforiaTrackable redWall = getLocalizationTrackable(LocalizationTrackable.RED_WALL);
+        VuforiaTrackable redWall = getLocalizationTrackable(ImageTarget.RED_WALL);
 
         OpenGLMatrix redWallLocation = OpenGLMatrix
                 .translation(0, -halfFieldLength, 0)
@@ -232,7 +198,7 @@ public class VuforiaManager {
         redWall.setLocation(redWallLocation);
         RobotLog.ii(TAG, "%s=%s", redWall.getName(), format(redWallLocation));
 
-        VuforiaTrackable blueWall = getLocalizationTrackable(LocalizationTrackable.BLUE_WALL);
+        VuforiaTrackable blueWall = getLocalizationTrackable(ImageTarget.BLUE_WALL);
         OpenGLMatrix blueWallLocation = OpenGLMatrix
                 .translation(0, halfFieldLength, 0)
                 .multiplied(Orientation.getRotationMatrix(
@@ -241,7 +207,7 @@ public class VuforiaManager {
         blueWall.setLocation(blueWallLocation);
         RobotLog.ii(TAG, "%s=%s", blueWall.getName(), format(blueWallLocation));
 
-        VuforiaTrackable redGoal = getLocalizationTrackable(LocalizationTrackable.RED_GOAL);
+        VuforiaTrackable redGoal = getLocalizationTrackable(ImageTarget.RED_GOAL);
         OpenGLMatrix redGoalLocation = OpenGLMatrix
                 .translation(halfFieldLength, -quadFieldLength, 0)
                 .multiplied(Orientation.getRotationMatrix(
@@ -250,7 +216,7 @@ public class VuforiaManager {
         redGoal.setLocation(redGoalLocation);
         RobotLog.ii(TAG, "%s=%s", redGoal.getName(), format(redGoalLocation));
 
-        VuforiaTrackable blueGoal = getLocalizationTrackable(LocalizationTrackable.BLUE_GOAL);
+        VuforiaTrackable blueGoal = getLocalizationTrackable(ImageTarget.BLUE_GOAL);
         OpenGLMatrix blueGoalLocation = OpenGLMatrix
                 .translation(halfFieldLength, quadFieldLength, 0)
                 .multiplied(Orientation.getRotationMatrix(
@@ -259,7 +225,7 @@ public class VuforiaManager {
         blueGoal.setLocation(blueGoalLocation);
         RobotLog.ii(TAG, "%s=%s", blueGoal.getName(), format(blueGoalLocation));
 
-        VuforiaTrackable frontWall = getLocalizationTrackable(LocalizationTrackable.FRONT_WALL);
+        VuforiaTrackable frontWall = getLocalizationTrackable(ImageTarget.FRONT_WALL);
         OpenGLMatrix frontWallLocation = OpenGLMatrix
                 .translation(-halfFieldLength, 0, 0)
                 .multiplied(Orientation.getRotationMatrix(
@@ -276,6 +242,7 @@ public class VuforiaManager {
      *
      * https://github.com/FIRST-Tech-Challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuforiaNavigation.java
      */
+    @SuppressWarnings("MagicNumber")
     private void setPhoneLocation() {
         // setting camera as the center of the robot for testing
         // also setting degrees to 0 for testing
@@ -288,7 +255,7 @@ public class VuforiaManager {
         RobotLog.ii(TAG, "phone=%s", format(phoneLocationOnRobot));
     }
 
-    /* END INITIALIZATION */
+    // endregion initialization
 
 
     /**
@@ -307,8 +274,8 @@ public class VuforiaManager {
      * @param item the trackable to check
      * @return whether the trackable is visible
      */
-    public boolean isTrackableVisible(LocalizationTrackable item) {
-        return listenersList.get(item).isVisible();
+    public boolean isTrackableVisible(ImageTarget item) {
+        return Objects.requireNonNull(infoMap.get(item)).isVisible();
     }
 
     /**
@@ -316,9 +283,10 @@ public class VuforiaManager {
      * @return the updated robot position
      */
     public OpenGLMatrix getUpdatedRobotPosition() {
-        for (LocalizationTrackable item : LocalizationTrackable.cachedValues()) {
+        for (ImageTarget item : ImageTarget.cachedValues()) {
             if (isTrackableVisible(item)) {
-                OpenGLMatrix currentPosition = listenersList.get(item).getUpdatedRobotLocation();
+                OpenGLMatrix currentPosition = Objects.requireNonNull(infoMap.get(item))
+                        .getListener().getUpdatedRobotLocation();
                 if (currentPosition != null) {
                     lastLocation = currentPosition;
                 }
@@ -328,32 +296,25 @@ public class VuforiaManager {
         return lastLocation;
     }
 
-    /**
-     * Gets the list of all trackables
-     * @return the list of trackables as a hashtable with their names and values
-     */
-    public Hashtable<LocalizationTrackable, VuforiaTrackable> getLocalizationTrackablesList(){
-        return localizationTrackablesList;
-    }
 
     /**
      * Get a trackable from the trackables list
      * @param item the trackable to get
      * @return the trackable as a VuforiaTrackable object
      */
-    public VuforiaTrackable getLocalizationTrackable(LocalizationTrackable item) {
-        return localizationTrackablesList.get(item);
+    private VuforiaTrackable getLocalizationTrackable(ImageTarget item) {
+        return Objects.requireNonNull(infoMap.get(item)).getTrackable();
     }
 
 
     /**
-     * Gets all locationalization trackables and returns them in a list
+     * Gets all localization trackables and returns them in a list
      * @return the list of localization trackables
      */
-    public ArrayList<OpenGLMatrix> getLocTrackablesAsMatrices() {
+    public ArrayList<OpenGLMatrix> getTrackablePositions() {
         ArrayList<OpenGLMatrix> matrices = new ArrayList<>();
-        for (VuforiaTrackable trackable : localizationTrackablesList.values()) {
-            matrices.add(trackable.getLocation());
+        for (TrackableInfo trackableInfo : infoMap.values()) {
+            matrices.add(trackableInfo.getTrackable().getLocation());
         }
         return matrices;
 
@@ -441,52 +402,63 @@ public class VuforiaManager {
         });
     }
 
-    /**
-     * Switches the vuforia camera to the provided camera instance, if its available
-     * this function is for testing only at this stage
-     * @param newCamera the camera to switch to
-     */
-    @TestOnly
-    private void switchCamera(CameraInstance newCamera) {
-//        if (newCamera.isAvailable())
-//            frameManager.switchSwitchableCamera(newCamera);
-        if (newCamera.isAvailable()) {
-            Log.d(TAG, "Vuforia switching camera to " + newCamera.name());
-            switchableCamera.setActiveCamera(newCamera.getWebcamName());
-        }
-    }
+
 
     public CameraCalibration getCameraCalibration() { return vuforiaLocalizer.getCameraCalibration(); }
 
-
-
-
-
-
-
-    // enum of targets to make everything easier
-    // add new trackables to here first then add the trackable object to the hashtable
-    // note, this has to be changed to be in order of the targets in the vuforia xml database
-    public enum LocalizationTrackable {
+    /**
+     * Enum of image targets to make managing targets easier.
+     * This has to be changed yearly, and the order needs to be changed to fit the order
+     * of the vuforia targets in the xml database
+     */
+    public enum ImageTarget {
         BLUE_GOAL,
         RED_GOAL,
         RED_WALL,
         BLUE_WALL,
         FRONT_WALL;
 
-        // this is used to avoid memory issues when repeatedly iterating over enums
-        // since a new copy of the array is returned each time .values() is called
-        private static final List<LocalizationTrackable> cachedList =
-                Arrays.asList(LocalizationTrackable.values());
+        /*
+         this is used to avoid memory issues when repeatedly iterating over enums
+         since a new copy of the array is returned each time .values() is called.
+         This isn't strictly necessary for most enums, but since this one is repeatedly being called
+         basically every opmode loop, it was having an impact on memory usage.
+        */
+        private static final List<ImageTarget> cachedList =
+                Arrays.asList(ImageTarget.values());
 
-        public static List<LocalizationTrackable> cachedValues() {
+        public static List<ImageTarget> cachedValues() {
             return cachedList;
         }
-        // consider adding fake .values method to mess up attempted calls
-//        public static List<LocalizationTrackable> values() {
-//            return cachedList;
-//        }
     }
+
+    /**
+     * Class for storing info about vuforia trackables
+     */
+    private static class TrackableInfo {
+
+        private final VuforiaTrackable trackable;
+        private final ImageTarget imageTarget;
+        private final VuforiaTrackableDefaultListener listener;
+
+        /**
+         * Initialize the trackable info
+         * @param trackable the vuforia trackable to store
+         * @param imageTarget the image target the trackable represents
+         */
+        private TrackableInfo(@NonNull VuforiaTrackable trackable, @NonNull ImageTarget imageTarget) {
+            this.trackable = trackable;
+            this.imageTarget = imageTarget;
+            // get the listener and store
+            this.listener = ((VuforiaTrackableDefaultListener)trackable.getListener());
+        }
+
+        private VuforiaTrackableDefaultListener getListener() { return listener; }
+        private VuforiaTrackable getTrackable() { return trackable; }
+        private ImageTarget getImageTarget() { return imageTarget; }
+        private boolean isVisible() { return listener.isVisible(); }
+    }
+
 
 
 }

@@ -68,6 +68,5 @@
     <inspection_tool class="SimplifiableEqualsExpression" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="StaticVariableOfConcreteClass" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="UnnecessaryToStringCall" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="UtilityClassCanBeEnum" enabled="true" level="WARNING" enabled_by_default="true" />
   </profile>
 </component>
