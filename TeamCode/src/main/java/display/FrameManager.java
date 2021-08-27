@@ -31,13 +31,14 @@ import org.firstinspires.ftc.robotcore.internal.camera.delegating.SwitchableCame
 import org.firstinspires.ftc.robotcore.internal.collections.EvictingBlockingQueue;
 import org.firstinspires.ftc.robotcore.internal.system.ContinuationSynchronizer;
 import org.firstinspires.ftc.robotcore.internal.system.Deadline;
+import org.jetbrains.annotations.TestOnly;
 
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
+@TestOnly
 public class FrameManager {
 
     private static final String TAG = "vuf.test.framemanager";

@@ -10,6 +10,7 @@ import androidx.annotation.Nullable;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraCharacteristics;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.jetbrains.annotations.TestOnly;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,6 +23,7 @@ import java.util.Objects;
  * @note The camera names have to be manually set per the configuration and match up with the
  * hardware map's camera names
  */
+@TestOnly
 public enum CameraInstance {
     FRONT("FrontCamera"),
     BACK("BackCamera"),
