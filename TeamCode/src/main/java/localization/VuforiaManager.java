@@ -16,6 +16,7 @@ import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.function.Consumer;
 import org.firstinspires.ftc.robotcore.external.function.Continuation;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraName;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
@@ -36,7 +37,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-import display.CameraInstance;
 import display.Visuals;
 
 
@@ -60,9 +60,9 @@ public class VuforiaManager {
     private VuforiaLocalizer vuforiaLocalizer;
     private OpenGLMatrix lastLocation = null;
     private final HardwareMap hardwareMap;
-    private final VuforiaLocalizer.CameraDirection cameraDirection;
+    private CameraName cameraName;
 
-    private OpenGLMatrix phoneLocationOnRobot;
+    private OpenGLMatrix cameraLocationOnRobot;
 
     private HashMap<ImageTarget, TrackableInfo> infoMap;
 
@@ -87,7 +87,7 @@ public class VuforiaManager {
     public VuforiaManager(HardwareMap hardwareMap, int mmFieldLength, boolean useDisplay) {
         this(hardwareMap, useDisplay);
         this.mmFieldLength = mmFieldLength;
-        setPhoneLocation();
+        setCameraLocation();
         initializeImageTargets();
 
     }
@@ -107,7 +107,6 @@ public class VuforiaManager {
      */
     public VuforiaManager(HardwareMap hardwareMap, boolean useDisplay) {
         this.hardwareMap = hardwareMap;
-        cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
         initializeVuforia(useDisplay);
     }
 
@@ -128,12 +127,13 @@ public class VuforiaManager {
         parameters.useExtendedTracking = true; // disable for memory testing
 
 
-        // set camera direction
-        parameters.cameraDirection = cameraDirection;
-        List<CameraName> cameraNames = CameraInstance.getAvailableCameraNames();
-        if (cameraNames.size() > 0) {
-            parameters.cameraName = cameraNames.get(0);
-            Log.d(TAG, "Adding camera to vuforia");
+        List<WebcamName> webcamNameList = ClassFactory.getInstance().getCameraManager().getAllWebcams();
+        if (webcamNameList.size() > 0) {
+            this.cameraName = webcamNameList.get(0);
+            parameters.cameraName = cameraName;
+            Log.d(TAG, "Adding webcam to vuforia");
+        } else {
+            Log.d(TAG, "No named cameras found");
         }
 
         vuforiaLocalizer = ClassFactory.getInstance().createVuforia(parameters);
@@ -168,7 +168,7 @@ public class VuforiaManager {
             TrackableInfo trackableInfo = new TrackableInfo(target, imageTarget);
             infoMap.put(imageTarget, trackableInfo);
             // let the listener know where the phone is
-            trackableInfo.getListener().setPhoneInformation(phoneLocationOnRobot, cameraDirection);
+            trackableInfo.getListener().setCameraLocationOnRobot(cameraName, cameraLocationOnRobot);
 
         }
 
@@ -236,23 +236,23 @@ public class VuforiaManager {
     }
 
     /**
-     * Sets the position of the phone on the robot
+     * Sets the position of the camera on the robot
      * SEE THE GITHUB FOR HOW TO DO THIS, ITS REALLY DETAILED
      * GO READ IT.
      *
      * https://github.com/FIRST-Tech-Challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptVuforiaNavigation.java
      */
     @SuppressWarnings("MagicNumber")
-    private void setPhoneLocation() {
+    private void setCameraLocation() {
         // setting camera as the center of the robot for testing
-        // also setting degrees to 0 for testing
-        phoneLocationOnRobot = OpenGLMatrix
+        // logitech c920: XZX 90 -90 0
+        cameraLocationOnRobot = OpenGLMatrix
                 .translation(0,0,0)
                 .multiplied(Orientation.getRotationMatrix(
                         AxesReference.EXTRINSIC, AxesOrder.XZX,
-                        AngleUnit.DEGREES, 90, 90, 90));
+                        AngleUnit.DEGREES, 90, -90, 0));
 
-        RobotLog.ii(TAG, "phone=%s", format(phoneLocationOnRobot));
+        RobotLog.ii(TAG, "camera = %s", format(cameraLocationOnRobot));
     }
 
     // endregion initialization

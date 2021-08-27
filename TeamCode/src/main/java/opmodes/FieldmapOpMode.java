@@ -23,6 +23,7 @@ import tf_detection.Detection;
 import tf_detection.TFManager;
 
 
+@SuppressWarnings("FeatureEnvy")
 @TeleOp(name="Fieldmap: Fieldmap OpMode", group="Testing")
 public class FieldmapOpMode extends OpMode {
     // field declarations
@@ -35,8 +36,8 @@ public class FieldmapOpMode extends OpMode {
     private FieldMap fieldMap;
     private PixelDistances pixelDistances;
     private final double inchesToMM = 25.4;
-    private final double toCameraCenter = 1.25; // inches from bottom of logitech c615 to actual camera
-    private final double cameraPlatform = 16; // inches
+    private final double toCameraCenter = 0.5; // c920
+    private final double cameraPlatform = 10; // inches
     private final double cameraHeight = (cameraPlatform + toCameraCenter) * inchesToMM;
 
     private static final int fieldLength = 3660;
@@ -77,23 +78,22 @@ public class FieldmapOpMode extends OpMode {
 
         movementController.updateButtonStates();
 //        // update map
-        OpenGLMatrix location = vuforiaManager.getUpdatedRobotPosition();
-        if (location != null) {
+        OpenGLMatrix robotPosition = vuforiaManager.getUpdatedRobotPosition();
+        if (robotPosition != null) {
             long startTime = System.nanoTime();
-            fieldMap.update(location);
+            fieldMap.update(robotPosition);
             long duration = (System.nanoTime() - startTime)/nanoToMilli;
-            Log.i(TAG, "Finished updating map in " + duration + " ms");
-            telemetry.addData("Robot position", VuforiaManager.format(location));
-        }  else {
-            Log.d(TAG, "no location");
+            Log.d(TAG, "Finished updating map in " + duration + " ms");
+            telemetry.addData("Robot position", VuforiaManager.format(robotPosition));
         }
+
         // get trackable status
         for (VuforiaManager.ImageTarget trackable : VuforiaManager.ImageTarget.cachedValues()) {
             telemetry.addData(trackable.name(), vuforiaManager.isTrackableVisible(trackable) ? "Visible" : "Not Visible");
         }
 
         if (movementController.getButtonState(ToggleButton.A) == ButtonState.KEY_DOWN) {
-            location = vuforiaManager.getUpdatedRobotPosition();
+            OpenGLMatrix location = vuforiaManager.getUpdatedRobotPosition();
             if (location != null) {
                 long startTime = System.nanoTime();
                 fieldMap.update(location);
@@ -106,7 +106,7 @@ public class FieldmapOpMode extends OpMode {
         }
 
         if (movementController.getButtonState(ToggleButton.B) == ButtonState.KEY_DOWN) {
-            location = vuforiaManager.getUpdatedRobotPosition();
+            OpenGLMatrix location = vuforiaManager.getUpdatedRobotPosition();
             if (location != null) {
                 Log.d(TAG, "printing transformations");
                 fieldMap.setRobotPosition(location);

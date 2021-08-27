@@ -41,9 +41,11 @@ import tf_detection.TFManager;
  * This map works in conjunction with vuforia's coordinate system in order to create the map
  * and plot updated positions
  *
- *
- * @ TODO: 8/8/21 error handling and prevention, keep track of null values to prevent those errors
- * @ FIXME: 8/12/21 There should only ever be one robot position space at once
+ * General project-wide to do list
+ * @ TODO: 8/12/21 There should only ever be one robot position space at once
+ * @ TODO: 8/25/21 Add downwards angles for camera
+ * @ TODO: 8/25/21 improve pixel distance accuracy
+ * @ TODO: 8/25/21 fix issue where recognitions get remapped because of slight position differences
  *
  *
  *
@@ -345,7 +347,7 @@ public class FieldMap {
      */
     private boolean isObjectGone(@NonNull @FieldCoordinates OpenGLMatrix cameraPosition,
                                  @NonNull @FieldCoordinates OpenGLMatrix fieldPosition,
-                                 @NonNull @ImageCoordinates Iterable<RectF> recognitionPixels) {
+                                 @NonNull @ImageCoordinates List<RectF> recognitionPixels) {
 
         float[] imageCoords = getImageCoordsFromFieldPosition(cameraPosition, fieldPosition);
         // make a box around the image coordinates so there's some leeway
@@ -457,6 +459,7 @@ public class FieldMap {
     public void setRobotPosition(@NonNull @FieldCoordinates OpenGLMatrix position) {
         robotPositionGL = new OpenGLMatrix(position); // copy because its safer
         int[] robotCoords = fieldToMatrix(robotPositionGL);
+        spaceMap.clearSpace(Space.ROBOT, false);
         spaceMap.setSpace(Space.ROBOT, robotCoords, false);
     }
 
@@ -587,6 +590,7 @@ public class FieldMap {
         int[] robotCoords = getRobotPosition();
         if (robotCoords == null)
             return null;
+        spaceMap.clearSpace(Space.ROBOT, false);
         spaceMap.setSpace(Space.ROBOT, robotCoords, false);
         return dLite.update(spaceMap, robotCoords);
     }

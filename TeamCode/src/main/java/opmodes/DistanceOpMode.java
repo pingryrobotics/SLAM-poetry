@@ -35,7 +35,7 @@ public class DistanceOpMode extends OpMode {
     // put any measurements here
     private final double inchesToMM = 25.4; // this is correct
     private final double toCameraCenter = 0.5; // inches from bottom of logitech c920 to actual camera
-    private final double cameraPlatform = 10.5; // random value
+    private final double cameraPlatform = 10; // random value
     private final double cameraHeightMM = (cameraPlatform + toCameraCenter) * inchesToMM;
     private static final int fieldLength = 3660; // mm (this is correct)
 
@@ -106,9 +106,9 @@ public class DistanceOpMode extends OpMode {
                     {0, 0},
                     {357, 220},
                     {309, 220},
-                    {283, 220}, // bad
-                    {269, 220}, // bad
-                    {260, 220}, // bad
+                    {283, 220},
+                    {269, 220},
+                    {260, 220},
             };
 
             for (int i = 0; i < testCoordinates.length; i++) {

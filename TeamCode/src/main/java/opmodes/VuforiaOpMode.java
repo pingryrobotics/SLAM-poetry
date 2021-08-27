@@ -12,6 +12,7 @@ import org.firstinspires.ftc.teamcode.GamepadController.ButtonState;
 import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 
 import java.util.Hashtable;
+import java.util.Map;
 
 import localization.VuforiaManager;
 
@@ -23,9 +24,9 @@ public class VuforiaOpMode extends OpMode {
     private GamepadController movementController;
     private GamepadController mechanismController;
     private VuforiaManager vuforiaManager;
-    private int mmFieldLength = 301;
+    private int mmFieldLength = 3660;
 
-    private Hashtable<VuforiaManager.ImageTarget, Telemetry.Item> trackableLogs;
+    private Map<VuforiaManager.ImageTarget, Telemetry.Item> trackableLogs;
 
 
 
@@ -34,7 +35,7 @@ public class VuforiaOpMode extends OpMode {
     @Override
     public void init() {
         movementController = new GamepadController(gamepad1);
-        vuforiaManager = new VuforiaManager(hardwareMap, 301, false);
+        vuforiaManager = new VuforiaManager(hardwareMap, mmFieldLength, false);
         trackableLogs = new Hashtable<>();
     }
 
@@ -80,7 +81,6 @@ public class VuforiaOpMode extends OpMode {
         movementController.updateButtonStates();
         if (movementController.getButtonState(ToggleButton.A) == ButtonState.KEY_DOWN) {
             Log.d(TAG, "saving frame");
-            vuforiaManager.captureFrameToFile();
         }
 
         if (movementController.getButtonState(ToggleButton.B) == ButtonState.KEY_HOLD) {

@@ -2,13 +2,13 @@ package pixel_distances;
 
 import static java.lang.Math.atan;
 import static java.lang.Math.tan;
+import static java.lang.Math.toDegrees;
 import static java.lang.Math.toRadians;
 
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.internal.camera.calibration.CameraCalibration;
 
 import java.util.Arrays;
@@ -20,6 +20,16 @@ import annotations.ImageCoordinates;
 /**
  * Class for finding distances to objects based on their pixel location using the focal length
  * of the camera
+ *
+ * @ TODO: 8/25/21 add angle differences, so the camera can be angled downwards.
+ *                  I think this could be done by getting the angle to the lowest point on the
+ *                  camera assuming its pointing straight, then get the angle to the closest
+ *                  visible distance on the angled camera. So if the camera can see 4 feet away
+ *                  at the nearest point while pointing straight, which would be like a 70 degree
+ *                  angle to the object, but 2 feet while angled, which might be calculated as maybe
+ *                  a 60 degree angle, the difference would be -10, so we subtract 10 degrees from
+ *                  each angle calculated with the assumption of pointing straight to get the downward
+ *                  angled accurate angle. This is untested but i think it would work.
  */
 public class FocalDistances implements PixelDistances {
     private static final String TAG = "vuf.test.focal_dist";
@@ -141,7 +151,7 @@ public class FocalDistances implements PixelDistances {
     private double getHorizontalAngle(float sidePx) {
         double adjacentSide = camCal.focalLengthX;
         double oppositeSide = ((double)camCal.getSize().getWidth() / 2) - sidePx;
-        return AngleUnit.DEGREES.fromRadians(Math.atan(oppositeSide/adjacentSide));
+        return toDegrees(Math.atan(oppositeSide/adjacentSide));
     }
 
     /**
@@ -153,7 +163,7 @@ public class FocalDistances implements PixelDistances {
     private double getVerticalAngle(float straightPx) {
         double adjacentSide = camCal.focalLengthY;
         double oppositeSide = straightPx - ((double)camCal.getSize().getHeight() / 2);
-        return AngleUnit.DEGREES.fromRadians(Math.atan(oppositeSide/adjacentSide));
+        return toDegrees(Math.atan(oppositeSide/adjacentSide));
     }
 
     // endregion distances to pixels
