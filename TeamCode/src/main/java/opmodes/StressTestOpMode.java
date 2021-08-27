@@ -1,16 +1,23 @@
 package opmodes;
 
+import static android.content.Context.ACTIVITY_SERVICE;
+
+import android.app.ActivityManager;
+import android.graphics.Bitmap;
 import android.util.Log;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.GamepadController;
 import org.firstinspires.ftc.teamcode.GamepadController.ButtonState;
 import org.firstinspires.ftc.teamcode.GamepadController.ToggleButton;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import display.Visuals;
 import tf_detection.Detection;
 import tf_detection.TFManager;
 import localization.VuforiaManager;
@@ -28,6 +35,7 @@ public class StressTestOpMode extends OpMode {
 
     private TFManager tfManager;
     private VuforiaManager vuforiaManager;
+    private final ArrayList<Bitmap> bitmapList = new ArrayList<>();
 
 
     // put any measurements here
@@ -78,6 +86,27 @@ public class StressTestOpMode extends OpMode {
 
         // button states need to be updated each loop for controls to work
         movementController.updateButtonStates();
+
+        if (movementController.getButtonState(ToggleButton.A) == ButtonState.KEY_DOWN) {
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+            ActivityManager activityManager = (ActivityManager) AppUtil.getDefContext()
+                    .getSystemService(ACTIVITY_SERVICE);
+
+            long largeHeapSize = activityManager.getLargeMemoryClass();
+            long defaultHeapSize = activityManager.getMemoryClass();
+            long lowMemThreshold = mi.threshold;
+            boolean lowMemory = mi.lowMemory;
+
+            Log.d(TAG, "Default heap size: " + defaultHeapSize);
+            Log.d(TAG, "Large heap size: " + largeHeapSize);
+            Log.d(TAG, "Low memory threshold: " + lowMemThreshold);
+            Log.d(TAG, "Low on memory?: " + lowMemory);
+        }
+
+        if (movementController.getButtonState(ToggleButton.RIGHT_TRIGGER) == ButtonState.KEY_HOLD) {
+            bitmapList.add(Visuals.loadImageBitmap());
+            Log.d(TAG, "bitmap list size: " + bitmapList.size());
+        }
 
 
         // do something when A is pressed
