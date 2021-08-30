@@ -5,6 +5,7 @@ import android.util.Log;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.firstinspires.ftc.robotcore.external.function.Consumer;
 
@@ -402,6 +403,29 @@ public class SpaceMap {
         return spaceMap[coords[0]][coords[1]];
     }
 
+    /**
+     * Sets the robot's position to the specified space
+     * @param robotCoords the robot coordinates to set
+     */
+    public void setRobotPosition(@NonNull @MatrixCoordinates int[] robotCoords) {
+        clearSpace(Space.ROBOT, true);
+        setSpace(Space.ROBOT, robotCoords, true);
+    }
+
+    /**
+     * Gets the robot position
+     * @return the robot's position, or null if there's no position
+     */
+    @Nullable
+    @MatrixCoordinates
+    public int[] getRobotPosition() {
+        List<int[]> positionList = getSpace(Space.ROBOT);
+        if (!positionList.isEmpty()) {
+            return positionList.get(0);
+        }
+        return null;
+    }
+
 
 
 
@@ -419,11 +443,13 @@ public class SpaceMap {
      * any reason. Examples include walls, image targets, stationary game objects, etc
      * Static fills cannot be removed or overridden by any function after being placed
      * However, during placement, coordinates with conflicts may be overridden
-     * Static fills should only be added ONCE, during initialization
+     * Static fills should only be added ONCE, during initialization.
      *
      * Dynamic filled spaces are spaces filled with spots such as the robot, a temporary obstacle,
      * or any other value that is subject to change.
      * Dynamic coordinates can be added, removed, and overridden at any time
+     *
+     * The robot position is considered static since it can only move under certain circumstances.
      *
      */
     public enum Space {
@@ -440,7 +466,7 @@ public class SpaceMap {
         CLEAR(Color.WHITE, true, false),
         // the robot
         @ColorInt
-        ROBOT(Color.BLUE, true, false),
+        ROBOT(Color.BLUE, true, true),
         // a field obstacle
         @ColorInt
         OBSTACLE(Color.BLACK, false, false),

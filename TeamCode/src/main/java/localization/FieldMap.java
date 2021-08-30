@@ -6,10 +6,12 @@ import static localization.SpaceMap.Space;
 import android.graphics.Bitmap;
 import android.graphics.RectF;
 import android.util.Log;
+import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import org.firstinspires.ftc.robotcore.external.Function;
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
@@ -22,6 +24,7 @@ import annotations.FieldCoordinates;
 import annotations.ImageCoordinates;
 import annotations.MatrixCoordinates;
 import display.Visuals;
+import localization.DetectionMapper.PotentialDetection;
 import pathfinding.AStar;
 import pathfinding.AStarNode;
 import pathfinding.DLite;
@@ -101,6 +104,7 @@ public class FieldMap {
 
     private OpenGLMatrix robotPositionGL;
 
+    private final boolean useDisplay;
 
 
     /**
@@ -119,8 +123,9 @@ public class FieldMap {
      * in a whole new one for a slightly different position
      *
      */
-    @FieldCoordinates
-    private final ArrayList<MappedRecognition> mappedRecognitionList = new ArrayList<>();
+//    @FieldCoordinates
+//    private final ArrayList<DetectionMapper.MappedDetection> mappedDetectionList = new ArrayList<>();
+    private final DetectionMapper detectionMapper = new DetectionMapper();
 
     // region initialization
     /**
@@ -161,6 +166,7 @@ public class FieldMap {
         this.fieldTransform = fieldSizeMM/2;
         this.tfManager = tfManager;
         this.pixelDistances = pixelDistances;
+        this.useDisplay = useDisplay;
         initializeDisplay(useDisplay);
         initializeFieldMap();
         initializeStaticFills(staticCoordsGL, staticCoordsInt);
@@ -227,20 +233,27 @@ public class FieldMap {
 
     // region recognition mapping
 
+    /**
+     * Update the field map.
+     * Updates the robot's position, the object detector recognitions, the mappings of said
+     * recognitions, and the display, if enabled.
+     * @param robotPositionGL the robot's position
+     */
     public void update(OpenGLMatrix robotPositionGL) {
         setRobotPosition(robotPositionGL);
         updateDynamicPositions();
         updateDisplay();
-        Log.i(TAG, "Mapped recognition list size: " + mappedRecognitionList.size());
     }
 
     /**
      * Update the display with the current spacemap
      */
     public void updateDisplay() {
-        Bitmap bitmap = Visuals.spaceMapToBitmap(spaceMap.getRawMap());
-        bitmap = Bitmap.createScaledBitmap(bitmap, bitmapDisplaySize, bitmapDisplaySize, false);
-        displaySource.updateImageView(bitmap);
+        if (useDisplay) {
+            Bitmap bitmap = Visuals.spaceMapToBitmap(spaceMap.getRawMap());
+            bitmap = Bitmap.createScaledBitmap(bitmap, bitmapDisplaySize, bitmapDisplaySize, false);
+            displaySource.updateImageView(bitmap);
+        }
     }
 
     /**
@@ -250,73 +263,20 @@ public class FieldMap {
      */
     public void updateDynamicPositions() {
         checkDisappearances(); // check disappearances beforehand
-        List<MappedRecognition> recognitionPositions = getRecognitionPositions();
-
-        List<int[]> removedPositions = updateMappedRecognitions(recognitionPositions);
-        spaceMap.clearSpace(removedPositions, false);
-        mapMappedRecognitions();
+        List<PotentialDetection> potentialDetections = getPotentialDetections();
+        Pair<ArrayList<int[]>, HashMap<Space, ArrayList<int[]>>> updatedCoords =
+                detectionMapper.update(potentialDetections);
+        spaceMap.clearSpace(updatedCoords.first, false);
+        spaceMap.addSpace(updatedCoords.second, false);
     }
 
-    /**
-     * Update the list of mapped recognitions with the potential recognitions
-     * If any recognitions are close to the other ones, then they're checked to see if they're the same
-     * or need to be overridden.
-     * If two recognitions of the same type are near each other, the mapped position is updated to
-     * the newer recognition's position. If they're of different types but occupy the same space,
-     * then the mapped position is updated with the new type and exact position of the newer rec.
-     * @param potentialRecognitions the list of other recognitions to check
-     * @return the list of removed matrix positions
-     */
-    public List<int[]> updateMappedRecognitions(List<MappedRecognition> potentialRecognitions) {
-        List<int[]> removedMatrixCoords = new ArrayList<>();
-        // loop through all potential recognitions and mapped recognitions
-        for (MappedRecognition potentialRecognition : potentialRecognitions) {
-            boolean potentialUsed = false; // whether the potential recognition was used at all
-            for (MappedRecognition mappedRecognition : mappedRecognitionList) {
-                // save the old position
-                int[] oldPosition = mappedRecognition.getMatrixPosition();
-                // position/space is updated if there's a conflict
-                boolean updated = mappedRecognition.updateIfConflict(potentialRecognition);
-                if (updated) {
-                    // if it was updated, we remove the old position note that this might be
-                    // redundant since we may be adding the same spot back, but its not really a big deal
-                    removedMatrixCoords.add(oldPosition);
-                    potentialUsed = true;
-                }
-            }
-            if (!potentialUsed) { // add it if it wasn't factored in previously
-                mappedRecognitionList.add(potentialRecognition);
-                Log.d(TAG, "Potential not used, adding");
-            }
-        }
-        return removedMatrixCoords;
-    }
-
-    /**
-     * Maps mapped recognitions onto the spacemap
-     * @ FIXME: 8/20/21 labels are a bit hard coded
-     */
-    public void mapMappedRecognitions() {
-        List<int[]> goldCoords = new ArrayList<>();
-        List<int[]> silverCoords = new ArrayList<>();
-        for (MappedRecognition recognition : mappedRecognitionList) {
-            int[] matrixPos = recognition.getMatrixPosition();
-            if (recognition.getSpace() == Space.TARGET_LOCATION) {
-                goldCoords.add(matrixPos);
-            } else {
-                silverCoords.add(matrixPos);
-            }
-        }
-        spaceMap.addSpace(Space.TARGET_LOCATION, goldCoords, false);
-        spaceMap.addSpace(Space.OBSTACLE, silverCoords, false);
-    }
 
     /**
      * Checks the recognition field positions list to see if any recognitions have disappeared
      * from their previous position. Essentially, we look at each camera and check the pixels where
      * the recognitions would be on their view. If there's a recognition blocking the pixel,
      * then we can't confirm if its there or not, so we assume it is. If there's nothing there,
-     * we know its gone and clear it from the space map.
+     * we know its gone and we can remove it.
      */
     public void checkDisappearances() {
         // get float rectangles for all the recognitions on screen
@@ -325,17 +285,14 @@ public class FieldMap {
             recognitionPixels.add(recognition.getRectF());
         }
 
-        List<int[]> goneList = new ArrayList<>();
-
-        for (int i = 0; i < mappedRecognitionList.size(); i++) {
-            MappedRecognition mappedRecognition = mappedRecognitionList.get(i);
-            if (isObjectGone(robotPositionGL, mappedRecognition.getFieldPosition(), recognitionPixels)) {
-                goneList.add(mappedRecognition.getMatrixPosition());
-                mappedRecognitionList.remove(i);
-                i--;
+        // give the detection mapper a function to use to check if an object is gone or not
+        // we need to provide it since the dm cant use fieldmap instance methods, nor should it directly
+        detectionMapper.markDisappearances(new Function<OpenGLMatrix, Boolean>() {
+            @Override
+            public Boolean apply(OpenGLMatrix arg) {
+                return isObjectGone(robotPositionGL, arg, recognitionPixels);
             }
-        }
-        spaceMap.clearSpace(goneList, false);
+        });
     }
 
     /**
@@ -358,34 +315,19 @@ public class FieldMap {
         float right = (float) Math.min(imageCoords[1]+pxTolerance, tfManager.imageWidth);
         RectF posRect = new RectF(left, top, right, bottom);
 
-
-
-//        float posArea = posRect.width() * posRect.height();
-//        Log.d(TAG, String.format("Image coordinates {vert, horz}: {%s, %s}", imageCoords[0], imageCoords[1]));
-
         // if the object's coordinates are obscured by a recognition, then we dont know if its
-        // there or not. It could also BE the recognition, so either way it definitively gone
+        // there or not. It could also BE the recognition, so either way its not definitively gone
         for (RectF recRect : recognitionPixels) {
-//            Log.d(TAG, "Object box: " + CoordinateUtils.rectToString(posRect));
-//            Log.d(TAG, "Recognition box: " + CoordinateUtils.rectToString(recRect));
-//            float recArea = recRect.width() * recRect.height();
             if (recRect.intersect(posRect)) {
                 /*
                 If we find that too many objects are being falsely occluded, then we can
-                limit the definition of 'occlusion' to above a certain iou
+                limit the definition of 'occlusion' to above a certain iou (intersect/union)
                  */
-//                float intersectArea = recRect.width() * recRect.height();
-//                float unionArea = recArea + posArea - intersectArea;
-//                Log.d(TAG, "Intersect: " + intersectArea);
-//                Log.d(TAG, "Union: " + unionArea);
-//                Log.d(TAG, "Intersect over union: " + intersectArea/unionArea);
-//                Log.d(TAG, "Object is occluded");
                 return false;
             }
         }
         // if we can confirm that it isnt covered by a recognition, but the location
         // where it would be is on screen, then its not there
-//        Log.d(TAG, "Object is gone");
         return true;
     }
 
@@ -414,24 +356,19 @@ public class FieldMap {
      * points easier and more accurate
      *
      * @ FIXME: 8/13/21 sort of hardcoded with labels for testing
-     * @return A list of mapped recognition object representing the potential recognitions' coordinates
+     * @return A list of potential recognition object representing the potential recognitions' coordinates
      */
     @SuppressWarnings("FeatureEnvy")
     @NonNull
     @MatrixCoordinates
     @FieldCoordinates
-    private List<MappedRecognition> getRecognitionPositions() {
+    private List<PotentialDetection> getPotentialDetections() {
 
-        List<MappedRecognition> potentialRecognitions = new ArrayList<>();
+        List<PotentialDetection> potentialRecognitions = new ArrayList<>();
 
         // loop through all recognitions
         List<Detection> recognitionList = tfManager.getLatestDetections();
         for (Detection detection : recognitionList) {
-            // log info
-//            float centerPx = (recognition.getLeft() + recognition.getRight())/2;
-//            Log.d(TAG, String.format("Recognition image coords {horz, vert}: {%s, %s}",
-//                    Math.round(centerPx), Math.round(recognition.getBottom())));
-
             // get their position on the field
             OpenGLMatrix fieldPosition = CoordinateUtils.convertDistancesToFieldPosition(
                     robotPositionGL, pixelDistances.getDistancesToPixels(detection.getBottom(), detection.getCenterX()));
@@ -441,7 +378,7 @@ public class FieldMap {
             Space space = (detection.getLabel().equals("Gold Mineral"))
                     ? Space.TARGET_LOCATION : Space.OBSTACLE;
             // add to list of potential recognitions
-            potentialRecognitions.add(new MappedRecognition(fieldPosition, matrixPosition, space));
+            potentialRecognitions.add(new PotentialDetection(fieldPosition, matrixPosition, space));
         }
         return potentialRecognitions;
     }
@@ -459,8 +396,7 @@ public class FieldMap {
     public void setRobotPosition(@NonNull @FieldCoordinates OpenGLMatrix position) {
         robotPositionGL = new OpenGLMatrix(position); // copy because its safer
         int[] robotCoords = fieldToMatrix(robotPositionGL);
-        spaceMap.clearSpace(Space.ROBOT, false);
-        spaceMap.setSpace(Space.ROBOT, robotCoords, false);
+        spaceMap.setRobotPosition(robotCoords);
     }
 
     // endregion set/add/clear dynamic
@@ -541,7 +477,7 @@ public class FieldMap {
      */
     @Nullable
     public SpaceMap aStarPathfind(@NonNull @FieldCoordinates int[] end_field_coords) {
-        int[] robotCoords = getRobotPosition();
+        int[] robotCoords = spaceMap.getRobotPosition();
         if (robotCoords == null)
             return null;
         Log.d(TAG, String.format("Robot coords: {%s, %s}", robotCoords[0], robotCoords[1]));
@@ -561,7 +497,7 @@ public class FieldMap {
      */
     @Nullable
     public SpaceMap dLitePathfind(@NonNull @FieldCoordinates int[] end_field_coords) {
-        int[] robotCoords = getRobotPosition();
+        int[] robotCoords = spaceMap.getRobotPosition();
         if (robotCoords == null)
             return null;
         Log.d(TAG, String.format("Robot coords: {%s, %s}", robotCoords[0], robotCoords[1]));
@@ -577,7 +513,7 @@ public class FieldMap {
      * @return true if its been initialized
      */
     public boolean isDLiteInitialized() {
-        return !(dLite == null);
+        return (dLite != null);
     }
 
     /**
@@ -587,11 +523,9 @@ public class FieldMap {
      */
     @Nullable
     public SpaceMap updateDLite() {
-        int[] robotCoords = getRobotPosition();
+        int[] robotCoords = spaceMap.getRobotPosition();
         if (robotCoords == null)
             return null;
-        spaceMap.clearSpace(Space.ROBOT, false);
-        spaceMap.setSpace(Space.ROBOT, robotCoords, false);
         return dLite.update(spaceMap, robotCoords);
     }
 
@@ -604,17 +538,6 @@ public class FieldMap {
         return spaceMap;
     }
 
-    /**
-     * Gets a copy of the robot's coordinates
-     * @ FIXME: 8/12/21 this *should* be notnull, but it cant be confirmed yet because we need
-     *          to ensure there's always a robot position present on the map
-     * @return the robot's coordinates, in matrix coords
-     */
-    @MatrixCoordinates
-    @Nullable
-    private int[] getRobotPosition() {
-        return spaceMap.getSpace(Space.ROBOT).get(0);
-    }
 
     /**
      * Gets recognitions from tensorflow
